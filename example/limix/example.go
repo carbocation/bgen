@@ -30,4 +30,20 @@ func main() {
 	defer bg.Close()
 
 	log.Printf("%+v\n", bg)
+
+	samples, err := bgen.ReadSamples(bg)
+	if err != nil {
+		log.Fatalln("Error:", err)
+	}
+
+	i := 0
+	for range samples {
+		// fmt.Println(i, sample.SampleID)
+		i++
+	}
+	if i > 0 {
+		log.Println("Saw up to", samples[i-1].SampleID)
+	}
+
+	log.Println("Iterated over", i, "samples")
 }

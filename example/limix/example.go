@@ -33,17 +33,18 @@ func main() {
 
 	samples, err := bgen.ReadSamples(bg)
 	if err != nil {
-		log.Fatalln("Error:", err)
-	}
+		log.Println(err)
+	} else {
 
-	i := 0
-	for range samples {
-		// fmt.Println(i, sample.SampleID)
-		i++
-	}
-	if i > 0 {
-		log.Println("Saw up to", samples[i-1].SampleID)
-	}
+		i := 0
+		for range samples {
+			// fmt.Println(i, sample.SampleID)
+			i++
+		}
+		if i > 0 {
+			log.Println("Saw up to", samples[i-1].SampleID)
+		}
 
-	log.Println("Iterated over", i, "samples")
+		log.Println("Iterated over", i, "samples")
+	}
 }

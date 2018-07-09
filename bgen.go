@@ -29,9 +29,9 @@ type BGEN struct {
 	File             *os.File
 	NVariants        uint32
 	NSamples         uint32
-	FlagCompression  uint32
-	FlagLayout       uint32
-	FlagHasSampleIDs uint32
+	FlagCompression  Compression
+	FlagLayout       Layout
+	FlagHasSampleIDs bool
 	SamplesStart     uint32
 	VariantsStart    uint32
 }
@@ -101,9 +101,33 @@ func populateBGENHeader(b *BGEN) error {
 		return pfx.Err(err)
 	}
 	flags := binary.LittleEndian.Uint32(buffer)
-	b.FlagCompression = flags & 3
-	b.FlagLayout = (flags & (15 << 2)) >> 2
-	b.FlagHasSampleIDs = (flags & (1 << 31)) >> 31
+	hasSampleIDs := (flags & (1 << 31)) >> 31
+	layout := (flags & (15 << 2)) >> 2
+	compression := flags & 3
+
+	// Derived results
+
+	if hasSampleIDs == 1 {
+		b.FlagHasSampleIDs = true
+	}
+
+	if layout == 1 {
+		b.FlagLayout = Layout1
+	} else if layout == 2 {
+		b.FlagLayout = Layout2
+	} else {
+		return pfx.Err(fmt.Errorf("Layout 1 and 2 are supported; layout %d is not", layout))
+	}
+
+	if compression == 0 {
+		b.FlagCompression = CompressionDisabled
+	} else if compression == 1 {
+		b.FlagCompression = CompressionZLIB
+	} else if compression == 2 {
+		b.FlagCompression = CompressionZStandard
+	} else {
+		return pfx.Err(fmt.Errorf("Compression 0, 1, and 2 are supported; compression %d is not", compression))
+	}
 
 	return nil
 }

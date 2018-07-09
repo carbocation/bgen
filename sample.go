@@ -16,7 +16,7 @@ func ReadSamples(b *BGEN) ([]Sample, error) {
 		return nil, pfx.Err(fmt.Errorf("b.File is nil"))
 	}
 
-	if b.FlagHasSampleIDs == 0 {
+	if !b.FlagHasSampleIDs {
 		return nil, pfx.Err(fmt.Errorf("This file indicates that it does not have sample IDs"))
 	}
 

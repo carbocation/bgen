@@ -8,6 +8,9 @@ import (
 	"github.com/carbocation/pfx"
 )
 
+// BGENVersion is the supported version of the BGEN file format
+const BGENVersion = "1.2"
+
 // MagicNumber contains the value required to confirm that a file is BGEN-conformant
 const MagicNumber = "bgen"
 
@@ -19,9 +22,6 @@ const (
 	offsetMagicNumber    = 16
 	offsetFreeStorage    = 20
 )
-
-// BGENVersion is the supported version of the BGEN file format
-const BGENVersion = "1.2"
 
 // BGEN is the main object used for parsing BGEN files
 type BGEN struct {

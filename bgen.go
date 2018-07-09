@@ -36,6 +36,10 @@ type BGEN struct {
 	VariantsStart    uint32
 }
 
+func (b *BGEN) Close() error {
+	return pfx.Err(b.File.Close())
+}
+
 // Open attempts to read a bgen file located at path. If successful,
 // this returns a new BGEN object. Otherwise, it returns an error.
 func Open(path string) (*BGEN, error) {

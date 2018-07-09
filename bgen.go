@@ -74,6 +74,8 @@ func populateBGENHeader(b *BGEN) error {
 	}
 	headerLength = int64(binary.LittleEndian.Uint32(buffer))
 
+	b.SamplesStart = uint32(headerLength + 4)
+
 	if err := b.parseAtOffsetWithBuffer(offsetNumberVariants, buffer); err != nil {
 		return pfx.Err(err)
 	}

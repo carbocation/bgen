@@ -14,7 +14,5 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	log.Println(bg)
-
-	log.Println("NSamples:", bg.NSamples)
+	log.Printf("%+v\n", bg)
 }

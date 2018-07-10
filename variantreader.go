@@ -1,10 +1,13 @@
 package bgen
 
 import (
+	"bytes"
+	"compress/zlib"
 	"encoding/binary"
 	"fmt"
 	"io"
 
+	"github.com/DataDog/zstd"
 	"github.com/carbocation/pfx"
 )
 
@@ -157,8 +160,10 @@ VariantLoop:
 					break
 				}
 				offset += uncompressedDataBlockSize
-				// TODO: Handle the uncompressed genotype data
-				_ = vr.buffer[:uncompressedDataBlockSize]
+				// Handle the uncompressed genotype data
+				if err = vr.populateProbabilitiesLayout1(v, vr.buffer[:uncompressedDataBlockSize]); err != nil {
+					break
+				}
 
 			} else if comp == CompressionZLIB {
 				if err = vr.readNBytesAtOffset(4, offset); err != nil {
@@ -171,8 +176,10 @@ VariantLoop:
 					break
 				}
 				offset += int64(genoBlockLength)
-				// TODO: Handle the ZLIB compressed genotype data
-				_ = vr.buffer[:genoBlockLength]
+				// Handle the ZLIB compressed genotype data
+				if err = vr.populateProbabilitiesLayout1(v, vr.buffer[:genoBlockLength]); err != nil {
+					break
+				}
 			} else {
 				err = fmt.Errorf("Compression choice %s is not compatible with Layout %s", vr.b.FlagCompression, vr.b.FlagLayout)
 				break
@@ -197,8 +204,10 @@ VariantLoop:
 				if err = vr.readNBytesAtOffset(int(nextDataOffset), offset); err != nil {
 					break
 				}
-				// TODO: Handle the uncompressed genotype data
-				_ = vr.buffer[:nextDataOffset]
+				// Handle the uncompressed genotype data
+				if err = vr.populateProbabilitiesLayout2(v, vr.buffer[:nextDataOffset], int(nextDataOffset)); err != nil {
+					break
+				}
 
 				offset += int64(nextDataOffset)
 
@@ -223,8 +232,10 @@ VariantLoop:
 				if err = vr.readNBytesAtOffset(int(genoBlockDataSizeToDecompress), offset); err != nil {
 					break
 				}
-				// TODO: Handle the compressed genotype data
-				_ = vr.buffer[:genoBlockDataSizeToDecompress]
+				// Handle the compressed genotype data
+				if err = vr.populateProbabilitiesLayout2(v, vr.buffer[:genoBlockDataSizeToDecompress], int(decompressedDataLength)); err != nil {
+					break
+				}
 
 				offset += int64(genoBlockDataSizeToDecompress)
 			}
@@ -249,4 +260,64 @@ func (vr *VariantReader) readNBytesAtOffset(N int, offset int64) error {
 
 	_, err := vr.b.File.ReadAt(vr.buffer[:N], offset)
 	return err
+}
+
+// TODO:
+func (vr *VariantReader) populateProbabilitiesLayout1(v *Variant, input []byte) error {
+	switch vr.b.FlagCompression {
+	case CompressionDisabled:
+
+	case CompressionZLIB:
+	}
+
+	return fmt.Errorf("Compression choice %s is not compatible with Layout %s", vr.b.FlagCompression, vr.b.FlagLayout)
+}
+
+// expectedSize acts as a checksum, ensuring that the decompressed size matches
+// with expectations.
+func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, expectedSize int) error {
+	switch vr.b.FlagCompression {
+	case CompressionDisabled:
+		if len(input) != expectedSize {
+			return pfx.Err(fmt.Errorf("Expected to decompress %d bytes, got %d", expectedSize, len(input)))
+		}
+		if err := probabilitiesFromDecompressedLayout2(v, input); err != nil {
+			return pfx.Err(err)
+		}
+	case CompressionZLIB:
+		bb := &bytes.Buffer{}
+
+		reader, err := zlib.NewReader(bytes.NewBuffer(input))
+		if err != nil {
+			return pfx.Err(err)
+		}
+		if _, err = io.Copy(bb, reader); err != nil {
+			return pfx.Err(err)
+		}
+		if len(bb.Bytes()) != expectedSize {
+			return pfx.Err(fmt.Errorf("Expected to decompress %d bytes, got %d", expectedSize, len(bb.Bytes())))
+		}
+		if err = probabilitiesFromDecompressedLayout2(v, bb.Bytes()); err != nil {
+			return pfx.Err(err)
+		}
+	case CompressionZStandard:
+		output, err := zstd.Decompress(nil, input)
+		if err != nil {
+			return pfx.Err(err)
+		}
+		if len(output) != expectedSize {
+			return pfx.Err(fmt.Errorf("Expected to decompress %d bytes, got %d", expectedSize, len(output)))
+		}
+		if err = probabilitiesFromDecompressedLayout2(v, output); err != nil {
+			return pfx.Err(err)
+		}
+	default:
+		return fmt.Errorf("Compression choice %s is not compatible with Layout %s", vr.b.FlagCompression, vr.b.FlagLayout)
+	}
+
+	return nil
+}
+
+func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) error {
+	return fmt.Errorf("Not yet implemented")
 }

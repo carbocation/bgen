@@ -8,3 +8,17 @@ const (
 	CompressionZLIB
 	CompressionZStandard
 )
+
+func (c Compression) String() string {
+	switch c {
+	case CompressionDisabled:
+		return "CompressionDisabled"
+	case CompressionZLIB:
+		return "CompressionZLIB"
+	case CompressionZStandard:
+		return "CompressionZStandard"
+
+	default:
+		return "Illegal selection"
+	}
+}

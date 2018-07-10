@@ -47,4 +47,18 @@ func main() {
 
 		log.Println("Iterated over", i, "samples")
 	}
+
+	vr := bg.NewVariantReader()
+	for i := 1; ; i++ {
+		v := vr.Read()
+		if v == nil {
+			break
+		}
+
+		log.Println(i, v)
+	}
+
+	if vr.Error() != nil {
+		log.Println("VR error:", err.Error())
+	}
 }

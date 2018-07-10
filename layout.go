@@ -7,3 +7,15 @@ const (
 	Layout1 Layout = iota
 	Layout2
 )
+
+func (l Layout) String() string {
+	switch l {
+	case Layout1:
+		return "Layout1"
+	case Layout2:
+		return "Layout2"
+
+	default:
+		return "Illegal selection"
+	}
+}

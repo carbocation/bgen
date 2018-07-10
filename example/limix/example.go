@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os/user"
 	"path/filepath"
@@ -37,9 +38,13 @@ func main() {
 	} else {
 
 		i := 0
-		for range samples {
-			// fmt.Println(i, sample.SampleID)
+		for _, sample := range samples {
+			fmt.Println(i, sample.SampleID)
 			i++
+
+			if i > 10 {
+				break
+			}
 		}
 		if i > 0 {
 			log.Println("Saw up to", samples[i-1].SampleID)
@@ -55,10 +60,14 @@ func main() {
 			break
 		}
 
+		if i > 10 {
+			break
+		}
+
 		log.Println(i, v)
 	}
 
 	if vr.Error() != nil {
-		log.Println("VR error:", err.Error())
+		log.Println("VR error:", vr.Error())
 	}
 }

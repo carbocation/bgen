@@ -71,7 +71,9 @@ func populateBGENHeader(b *BGEN) error {
 	if err := b.parseAtOffsetWithBuffer(offsetVariant, buffer); err != nil {
 		return pfx.Err(err)
 	}
-	b.VariantsStart = binary.LittleEndian.Uint32(buffer) + 4 // First variant is at variant_offset + 4. Note that (b.VariantsStart = variant_offset + 4)
+	// VariantsStart here only if Layout == 1. If Layout == 2, however, the
+	// first variant is instead at variant_offset + 4.
+	b.VariantsStart = binary.LittleEndian.Uint32(buffer)
 
 	if err := b.parseAtOffsetWithBuffer(offsetHeaderLength, buffer); err != nil {
 		return pfx.Err(err)

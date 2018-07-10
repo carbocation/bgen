@@ -24,6 +24,11 @@ func (b *BGEN) NewVariantReader() *VariantReader {
 		b:             b,
 	}
 
+	if b.FlagLayout != Layout1 {
+		// Layout1 contains an extra 4 bytes at the start of each variant
+		vr.currentOffset += 4
+	}
+
 	return vr
 }
 
@@ -54,6 +59,18 @@ func (vr *VariantReader) parseVariantAtOffset(offset int64) (*Variant, int64, er
 
 VariantLoop:
 	for {
+		if vr.b.FlagLayout == Layout1 {
+			// Layout1 has 4 extra bytes at the start of each variant that
+			// denotes the number of individuals the row represents.
+
+			// log.Println("We are on layout 1")
+			if err = vr.readNBytesAtOffset(4, offset); err != nil {
+				break
+			}
+			offset += 4
+			// log.Println("Individuals represented:", binary.LittleEndian.Uint32(vr.buffer[:4]))
+		}
+
 		// ID:
 		if err = vr.readNBytesAtOffset(2, offset); err != nil {
 			break

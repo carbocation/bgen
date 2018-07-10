@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"bitbucket.org/kathiresanlab/bgen"
+	"github.com/carbocation/bgen"
 	"github.com/carbocation/pfx"
 )
 

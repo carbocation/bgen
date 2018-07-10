@@ -85,7 +85,7 @@ VariantLoop:
 		offset += 2
 		stringSize = int(binary.LittleEndian.Uint16(vr.buffer[:2]))
 		if stringSize != 2 {
-			err = fmt.Errorf("Chromosome field size is %d bytes; expected 2", stringSize)
+			err = fmt.Errorf("Variant %d: Chromosome field size is %d bytes; expected 2", vr.VariantsSeen, stringSize)
 			break
 		}
 		if err = vr.readNBytesAtOffset(stringSize, offset); err != nil {
@@ -217,11 +217,10 @@ VariantLoop:
 
 		break
 	}
-	// log.Println(vr.b.FlagLayout)
-	// log.Println(vr.b.FlagCompression)
-	// panic("yah")
-	// log.Println("New offset:", offset)
 
+	if err != nil {
+		v = nil
+	}
 	return v, offset, err
 }
 

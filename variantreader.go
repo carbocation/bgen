@@ -51,8 +51,9 @@ func (vr *VariantReader) Read() *Variant {
 	return v
 }
 
-// parseVariantAtOffset does not mutate the VariantReader.
-// TODO: Offer an option with a reusable buffer to reduce allocations
+// parseVariantAtOffset makes heavy use of readNBytesAtOffset to read one
+// variant starting at the given offset. readNBytesAtOffset does mutate
+// *VariantReader by modifying its buffer to reduce allocations.
 func (vr *VariantReader) parseVariantAtOffset(offset int64) (*Variant, int64, error) {
 	v := &Variant{}
 	var err error

@@ -25,15 +25,15 @@ const (
 
 // BGEN is the main object used for parsing BGEN files
 type BGEN struct {
-	FilePath         string
-	File             *os.File
-	NVariants        uint32
-	NSamples         uint32
+	FilePath         string   // TODO: Make private, expose fully resolved path by method?
+	File             *os.File // TODO: Make private, expose by method (if at all)?
+	NVariants        uint32   // TODO: Make private, expose by method?
+	NSamples         uint32   // TODO: Make private, expose by method?
 	FlagCompression  Compression
 	FlagLayout       Layout
 	FlagHasSampleIDs bool
-	SamplesStart     uint32
-	VariantsStart    uint32
+	SamplesStart     uint32 // TODO: Make private, expose by method (if at all)?
+	VariantsStart    uint32 // TODO: Make private, expose by method (if at all)?
 }
 
 func (b *BGEN) Close() error {
@@ -94,6 +94,10 @@ func populateBGENHeader(b *BGEN) error {
 		return pfx.Err(err)
 	}
 	if MagicNumber != string(buffer) {
+		// Note: The reference implementation seems to also permit "0000" in
+		// addition to "bgen" as an allowable string:
+		// https://bitbucket.org/gavinband/bgen/src/68ed4e34bac9cdda9441661e24550c6f76021804/src/bgen.cpp#lines-99
+		// We do not allow that currently.
 		return pfx.Err(fmt.Errorf("The BGEN header value at offset %d is expected to resolve to the Magic Number %s (%v when printed as a byte slice), but instead resolved to byte slice %v", offsetMagicNumber, MagicNumber, []byte(MagicNumber), buffer))
 	}
 

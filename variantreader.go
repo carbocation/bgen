@@ -91,7 +91,7 @@ VariantLoop:
 		if err = vr.readNBytesAtOffset(stringSize, offset); err != nil {
 			break
 		}
-		v.Chromosome = Chromosome(binary.LittleEndian.Uint16(vr.buffer[:stringSize]))
+		v.Chromosome = string(vr.buffer[:stringSize])
 		offset += int64(stringSize)
 
 		// Position

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/DataDog/zstd"
 	"github.com/carbocation/pfx"
@@ -319,5 +320,73 @@ func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, 
 }
 
 func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) error {
+	log.Println(*v)
+	prob := ProbabilityLayout2{}
+	cursor := 0
+	var size int
+
+	size = 4
+	prob.NIndividuals = binary.LittleEndian.Uint32(input[cursor : cursor+size])
+	cursor += size
+
+	prob.SampleProbabilities = make([]*SampleProbability, prob.NIndividuals, prob.NIndividuals)
+
+	size = 2
+	prob.NAlleles = binary.LittleEndian.Uint16(input[cursor : cursor+size])
+	cursor += size
+
+	size = 1
+	prob.MinimumPloidy = input[cursor]
+	cursor += size
+
+	size = 1
+	prob.MaximumPloidy = input[cursor]
+	cursor += size
+
+	// For each individual (NIndividuals), there is a byte of data. The most
+	// significant bit represents missing (if 1) or nonmissing. The secondmost
+	// significant bit seems to be unused. The 6 least significant bits
+	// represent ploidy, clamped to (0-63). (NB: 64 is the capacity of a 6-bit
+	// value; 2^6 [or 1<<6-1].)
+	size = 1 // byte per sample
+	for i := range prob.SampleProbabilities {
+		sp := &SampleProbability{}
+
+		// Most significant bit:
+		sp.Missing = (input[cursor]&(1<<7) == 1)
+
+		// 6 least significant bits:
+		sp.Ploidy = input[cursor] & (1<<6 - 1)
+
+		prob.SampleProbabilities[i] = sp
+
+		cursor += size
+	}
+
+	size = 1
+	prob.Phased = input[cursor] == 1
+	if input[cursor] > 1 {
+		return pfx.Err(fmt.Errorf("Byte representing phased status was %d (neither 0 nor 1) for variant %v", input[cursor], *v))
+	}
+	cursor += size
+
+	size = 1
+	prob.NProbabilityBits = input[cursor]
+	if input[cursor] > 32 || input[cursor] < 1 {
+		return pfx.Err(fmt.Errorf("Byte representing number of bits used to store probabilty was %d (must be 1-32 inclusive) for variant %v", input[cursor], *v))
+	}
+	cursor += size
+
+	v.ProbabilitiesLayout2 = &prob
+	log.Printf("%+v\n%+v\n", *v, v.ProbabilitiesLayout2)
+	for i, v := range v.ProbabilitiesLayout2.SampleProbabilities {
+		if v != nil {
+			log.Printf("%+v\n", v)
+		}
+		if i > 0 {
+			break
+		}
+	}
+
 	return fmt.Errorf("Not yet implemented")
 }

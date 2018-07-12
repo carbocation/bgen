@@ -7,8 +7,10 @@ type Variant struct {
 	Position             uint32
 	NAlleles             uint16
 	Alleles              []Allele
-	ProbabilitiesLayout1 []ProbabilityLayout1
-	ProbabilitiesLayout2 []ProbabilityLayout2
+	ProbabilitiesLayout1 *ProbabilityLayout1
+	ProbabilitiesLayout2 *ProbabilityLayout2
+	// ProbabilitiesLayout1 []ProbabilityLayout1
+	// ProbabilitiesLayout2 []ProbabilityLayout2
 }
 
 //func NewVariantReader() // <- iterate over variants sequentially, possibly to build an index

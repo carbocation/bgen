@@ -319,7 +319,7 @@ func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, 
 	return nil
 }
 
-func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) error {
+func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) {
 	log.Println(*v)
 	prob := ProbabilityLayout2{}
 	cursor := 0
@@ -334,6 +334,10 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) error {
 	size = 2
 	prob.NAlleles = binary.LittleEndian.Uint16(input[cursor : cursor+size])
 	cursor += size
+
+	if prob.NAlleles != v.NAlleles {
+		return pfx.Err(fmt.Errorf("NAlleles from the probability data (%d) differs from that of the variant (%d)", prob.NAlleles, v.NAlleles))
+	}
 
 	size = 1
 	prob.MinimumPloidy = input[cursor]
@@ -377,16 +381,102 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) error {
 	}
 	cursor += size
 
+	// From here out, we read *bits* instead of bytes
+	rdr := newBitReader(bytes.NewBuffer(input[cursor:]))
+
+	// For the actual probabilities,
+	var denom = float64(uint(1)<<prob.NProbabilityBits - 1)
+
+	var probBits uint64
+	var nCombs int
+	for _, sp := range prob.SampleProbabilities {
+		probBits = 0
+
+		if !prob.Phased {
+			nCombs = Choose(int(prob.NAlleles)+int(sp.Ploidy)-1, int(prob.NAlleles)-1)
+		}
+
+		if sp.Missing {
+			// Missing values are represented as zeroes but are *not* skipped.
+			// "Probabilities for samples with missing data (as defined by the
+			// missingness/ploidy byte) are written as zeroes (note this
+			// represents a change from the earlier draft of this spec; see the
+			// rationale below)." So, need to jump forward by this many bytes.
+
+			if prob.Phased {
+				// The i'th sample's data contains this many *bits*:
+				if _, err = rdr.ReadUint(int(prob.NProbabilityBits) * int(sp.Ploidy) * (int(prob.NAlleles) - 1)); err != nil {
+					return pfx.Err(err)
+				}
+			} else {
+				// Unphased
+				if _, err = rdr.ReadUint(int(prob.NProbabilityBits) * (nCombs - 1)); err != nil {
+					return pfx.Err(err)
+				}
+			}
+
+			continue
+		}
+
+		// Now iterating it bits, not bytes
+
+		if prob.Phased {
+			// The sample's data contains this many bytes:
+			for i := 0; i < int(sp.Ploidy); i++ {
+				for j := 0; j < int(prob.NAlleles)-1; j++ {
+
+					probBits, err = rdr.ReadUint(int(prob.NProbabilityBits))
+					if err != nil {
+						return pfx.Err(err)
+					}
+					sp.Probabilities = append(sp.Probabilities, float64(probBits)/denom)
+				}
+			}
+		} else {
+			// Unphased
+			for i := 0; i < nCombs-1; i++ {
+
+				probBits, err = rdr.ReadUint(int(prob.NProbabilityBits))
+				if err != nil {
+					return pfx.Err(err)
+				}
+				sp.Probabilities = append(sp.Probabilities, float64(probBits)/denom)
+			}
+		}
+
+		// prob.SampleProbabilities = append(prob.SampleProbabilities)
+	}
+
 	v.ProbabilitiesLayout2 = &prob
 	log.Printf("%+v\n%+v\n", *v, v.ProbabilitiesLayout2)
 	for i, v := range v.ProbabilitiesLayout2.SampleProbabilities {
 		if v != nil {
 			log.Printf("%+v\n", v)
 		}
-		if i > 0 {
+		if i > 5 {
 			break
 		}
 	}
 
 	return fmt.Errorf("Not yet implemented")
 }
+
+// type bitReader struct {
+// 	bitCursor int
+// 	bytes     []byte
+// }
+
+// func newBitReader(b []byte) *bitReader {
+// 	return &bitReader{
+// 		bytes: b,
+// 	}
+// }
+
+// func (b *bitReader) ReadIntFromNBits(n int) int {
+// 	if n < 1 {
+// 		return 0
+// 	}
+
+// 	b.bitCursor += n
+
+// }

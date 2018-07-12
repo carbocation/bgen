@@ -25,7 +25,7 @@ type ProbabilityLayout2 struct {
 type SampleProbability struct {
 	Missing       bool
 	Ploidy        uint8 // Limited to 0-63
-	Probabilities [][]float64
+	Probabilities []float64
 }
 
 // Ploidy: Z

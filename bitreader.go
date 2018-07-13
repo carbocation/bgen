@@ -51,9 +51,13 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 	// Byte order is bad
 	// Collect bytes
 	// Reverse their order
+
+	shift := 8 - nbits
+	mask := 1<<uint(nbits) - 1
+
 	loops := nbits / 8
 	resid := nbits % 8
-	invMask := 8 - nbits
+	// invMask := 8 - nbits
 	// invMask := 8 % nbits
 
 	results := make([]byte, 0, loops)
@@ -88,6 +92,8 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 		// result <<= (uint(invMask) - 1)
 		// result = result<<uint(invMask) - 1
 		// result = (uint(result) & uint(mask)) << uint(shift)
+
+		result = byte((uint(result) & uint(mask)) << uint(shift))
 
 		results = append(results, result)
 	}

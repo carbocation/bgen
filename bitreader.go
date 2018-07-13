@@ -2,7 +2,10 @@ package bgen
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
+
+	"github.com/carbocation/pfx"
 )
 
 // Via https://play.golang.org/p/rn0bAjeEGtK
@@ -98,14 +101,17 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 		results = append(results, result)
 	}
 
-	if nbits > 32 {
+	if nbits == 64 {
 		final = binary.LittleEndian.Uint64(results)
-	} else if nbits > 16 {
+	} else if nbits == 32 {
 		final = uint64(binary.LittleEndian.Uint32(results))
-	} else if nbits > 8 {
+	} else if nbits == 16 {
 		final = uint64(binary.LittleEndian.Uint16(results))
-	} else if nbits <= 8 {
+	} else if nbits == 8 {
 		final = uint64(results[0])
+	} else {
+		final = 0
+		err = pfx.Err(fmt.Errorf("Only 8, 16, and 32 bit probabilities are supported. %v is not", nbits))
 	}
 	return
 }

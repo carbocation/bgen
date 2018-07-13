@@ -472,7 +472,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 				// if prob.NProbabilityBits < 100 {
 
 				// This works for 8 bits only
-				probBits, err = rdr.ReadUint(int(prob.NProbabilityBits))
+				probBits, err = rdr.ReadUintLittleEndian(int(prob.NProbabilityBits))
 				if err != nil {
 					panic(err)
 				}

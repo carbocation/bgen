@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 
-	"github.com/DataDog/zstd"
 	"github.com/carbocation/pfx"
 )
 
@@ -302,7 +301,8 @@ func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, 
 			return pfx.Err(err)
 		}
 	case CompressionZStandard:
-		output, err := zstd.Decompress(nil, input)
+		output, err := DecompressZStandard(nil, input)
+		//output, err := zstd.Decompress(nil, input)
 		if err != nil {
 			return pfx.Err(err)
 		}

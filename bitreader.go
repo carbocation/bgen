@@ -1,6 +1,8 @@
 package bgen
 
-import "io"
+import (
+	"io"
+)
 
 // Via https://play.golang.org/p/rn0bAjeEGtK
 

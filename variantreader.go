@@ -403,8 +403,13 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 
 			if prob.Phased {
 				// The i'th sample's data contains this many *bits*:
-				if _, err = rdr.ReadUint(int(prob.NProbabilityBits) * int(sp.Ploidy) * (int(prob.NAlleles) - 1)); err != nil {
-					return pfx.Err(err)
+				// if _, err = rdr.ReadUint(int(prob.NProbabilityBits) * int(sp.Ploidy) * (int(prob.NAlleles) - 1)); err != nil {
+				// 	return pfx.Err(err)
+				// }
+				for i := 0; i < int(prob.NProbabilityBits)*int(sp.Ploidy)*(int(prob.NAlleles)-1); i++ {
+					if _, err := rdr.ReadBit(); err != nil {
+						return pfx.Err(err)
+					}
 				}
 			} else {
 				// Unphased
@@ -428,12 +433,22 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 		if prob.Phased {
 			// The sample's data contains this many bytes:
 			for i := 0; i < int(sp.Ploidy); i++ {
+				probBits = 0
 				for j := 0; j < int(prob.NAlleles)-1; j++ {
-
-					probBits, err = rdr.ReadUint(int(prob.NProbabilityBits))
-					if err != nil {
-						return pfx.Err(err)
+					for j := 0; j < int(prob.NProbabilityBits); j++ {
+						bit, err := rdr.ReadBit()
+						if err != nil {
+							return pfx.Err(err)
+						}
+						if bit {
+							probBits |= uint64(1) << uint64(j) // uint((int(prob.NProbabilityBits)-1)-j)
+						}
 					}
+
+					// probBits, err = rdr.ReadUint(int(prob.NProbabilityBits))
+					// if err != nil {
+					// 	return pfx.Err(err)
+					// }
 					sp.Probabilities = append(sp.Probabilities, float64(probBits)/denom)
 				}
 			}
@@ -471,7 +486,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	// Try to read just one more bit from the reader, expecting that it will
 	// simply be the EOF. If not, we didn't properly read all the bits.
 	if _, err = rdr.ReadBit(); err != io.EOF {
-		return pfx.Err("Additional bits were left unread for variant %v")
+		return pfx.Err(fmt.Errorf("Additional bits were left unread for variant %v", *v))
 	}
 
 	// log.Printf("%+v\n%+v\n", *v, v.ProbabilitiesLayout2)

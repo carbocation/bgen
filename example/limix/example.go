@@ -81,6 +81,7 @@ func main() {
 		}
 
 		log.Printf("Variant %d) %+v ProbBits: %d\n", i, v, v.ProbabilitiesLayout2.NProbabilityBits)
+		log.Printf("ProbabilityLayout2: %+v\n", v.ProbabilitiesLayout2)
 	}
 
 	if vr.Error() != nil {

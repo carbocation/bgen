@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/DataDog/zstd"
 	"github.com/carbocation/pfx"
@@ -320,7 +319,6 @@ func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, 
 }
 
 func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) {
-	log.Println(*v)
 	prob := ProbabilityLayout2{}
 	cursor := 0
 	var size int
@@ -385,12 +383,12 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	rdr := newBitReader(bytes.NewBuffer(input[cursor:]))
 
 	// For the actual probabilities,
-	var denom = float64(uint(1)<<prob.NProbabilityBits - 1)
+	denom := float64(uint64(1)<<uint64(prob.NProbabilityBits) - 1)
 
-	var probBits uint64
+	var probBits, pSum uint64
 	var nCombs int
 	for _, sp := range prob.SampleProbabilities {
-		probBits = 0
+		probBits, pSum, nCombs = 0, 0, 0
 
 		if !prob.Phased {
 			nCombs = Choose(int(prob.NAlleles)+int(sp.Ploidy)-1, int(prob.NAlleles)-1)
@@ -410,8 +408,15 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 				}
 			} else {
 				// Unphased
-				if _, err = rdr.ReadUint(int(prob.NProbabilityBits) * (nCombs - 1)); err != nil {
-					return pfx.Err(err)
+				// if _, err = rdr.ReadUint(int(prob.NProbabilityBits) * (nCombs - 1)); err != nil {
+				// 	return pfx.Err(err)
+				// }
+				for i := 0; i < nCombs-1; i++ {
+					for j := 0; j < int(prob.NProbabilityBits); j++ {
+						if _, err := rdr.ReadBit(); err != nil {
+							return pfx.Err(err)
+						}
+					}
 				}
 			}
 
@@ -435,30 +440,53 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 		} else {
 			// Unphased
 			for i := 0; i < nCombs-1; i++ {
-
-				probBits, err = rdr.ReadUint(int(prob.NProbabilityBits))
-				if err != nil {
-					return pfx.Err(err)
+				probBits = 0
+				// Read the j'th bit at a time
+				for j := 0; j < int(prob.NProbabilityBits); j++ {
+					bit, err := rdr.ReadBit()
+					if err != nil {
+						return pfx.Err(err)
+					}
+					if bit {
+						probBits |= uint64(1) << uint64(j) // uint((int(prob.NProbabilityBits)-1)-j)
+					}
 				}
+
+				pSum += probBits
+
+				// probBits, err = rdr.ReadUint(int(prob.NProbabilityBits))
+				// if err != nil {
+				// 	return pfx.Err(err)
+				// }
+
 				sp.Probabilities = append(sp.Probabilities, float64(probBits)/denom)
 			}
+			// Final combination is implied
+			sp.Probabilities = append(sp.Probabilities, (denom-float64(pSum))/denom)
 		}
-
-		// prob.SampleProbabilities = append(prob.SampleProbabilities)
 	}
 
 	v.ProbabilitiesLayout2 = &prob
-	log.Printf("%+v\n%+v\n", *v, v.ProbabilitiesLayout2)
-	for i, v := range v.ProbabilitiesLayout2.SampleProbabilities {
-		if v != nil {
-			log.Printf("%+v\n", v)
-		}
-		if i > 5 {
-			break
-		}
+
+	// Try to read just one more bit from the reader, expecting that it will
+	// simply be the EOF. If not, we didn't properly read all the bits.
+	if _, err = rdr.ReadBit(); err != io.EOF {
+		return pfx.Err("Additional bits were left unread for variant %v")
 	}
 
-	return fmt.Errorf("Not yet implemented")
+	// log.Printf("%+v\n%+v\n", *v, v.ProbabilitiesLayout2)
+	// for i, v := range v.ProbabilitiesLayout2.SampleProbabilities {
+	// 	if v != nil {
+	// 		log.Printf("%+v\n", v)
+	// 	}
+	// 	if i > 5 {
+	// 		break
+	// 	}
+	// }
+
+	// return fmt.Errorf("Not yet implemented")
+
+	return nil
 }
 
 // type bitReader struct {

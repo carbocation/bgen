@@ -60,11 +60,27 @@ func main() {
 			break
 		}
 
-		if i > 10 {
-			break
+		for j, pb := range v.ProbabilitiesLayout2.SampleProbabilities {
+			if j > 10 {
+				continue
+			}
+
+			if i > 10 {
+				continue
+			}
+
+			if pb.Missing {
+				log.Printf("\tProb %d) %s\n", j, "is missing")
+			} else {
+				log.Printf("\tProb %d) %+v\n", j, pb.Probabilities)
+			}
 		}
 
-		log.Println(i, v)
+		if i > 10 {
+			continue
+		}
+
+		log.Printf("Variant %d) %+v ProbBits: %d\n", i, v, v.ProbabilitiesLayout2.NProbabilityBits)
 	}
 
 	if vr.Error() != nil {

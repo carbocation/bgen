@@ -63,7 +63,16 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 	// invMask := 8 - nbits
 	// invMask := 8 % nbits
 
-	results := make([]byte, 0, loops)
+	var results []byte
+	if nbits > 32 {
+		results = make([]byte, 8, 8)
+	} else if nbits > 16 {
+		results = make([]byte, 4, 4)
+	} else if nbits > 8 {
+		results = make([]byte, 2, 2)
+	} else {
+		results = make([]byte, 1, 1)
+	}
 
 	for loop := 0; loop < loops; loop++ {
 		var result byte
@@ -76,7 +85,7 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 				result |= 1 << uint(i)
 			}
 		}
-		results = append(results, result)
+		results[loop] = result
 	}
 	if resid > 0 {
 		var result byte
@@ -98,20 +107,20 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 
 		result = byte((uint(result) & uint(mask)) << uint(shift))
 
-		results = append(results, result)
+		results[loops] = result
 	}
 
-	if nbits == 64 {
+	if nbits > 32 {
 		final = binary.LittleEndian.Uint64(results)
-	} else if nbits == 32 {
+	} else if nbits > 16 {
 		final = uint64(binary.LittleEndian.Uint32(results))
-	} else if nbits == 16 {
+	} else if nbits > 8 {
 		final = uint64(binary.LittleEndian.Uint16(results))
-	} else if nbits == 8 {
-		final = uint64(results[0])
 	} else {
-		final = 0
-		err = pfx.Err(fmt.Errorf("Only 8, 16, and 32 bit probabilities are supported. %v is not", nbits))
+		final = uint64(results[0])
+	}
+	if nbits%8 != 0 {
+		return 0, pfx.Err(fmt.Errorf("Currently can only handle probabilities that are multiples of 8 bits (8, 16, 24, 32)"))
 	}
 	return
 }

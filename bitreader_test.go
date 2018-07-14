@@ -49,3 +49,23 @@ func TestBitReadUint(t *testing.T) {
 		t.Errorf("Got %d, expected %d", val, target)
 	}
 }
+
+func TestBitReaderLittleEndianSubByte(t *testing.T) {
+	value := []byte{93}
+
+	br := newBitReader(bytes.NewBuffer(value))
+	valBig, err := br.ReadUint(7)
+	if err != nil {
+		t.Error(err)
+	}
+
+	br = newBitReader(bytes.NewBuffer(value))
+	valLittle, err := br.ReadUintLittleEndian(7)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if valBig != valLittle {
+		t.Errorf("First 7 bits of %d yielded %d from bigendian, different from %d from littleendian", value[0], valBig, valLittle)
+	}
+}

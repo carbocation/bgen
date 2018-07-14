@@ -2,10 +2,7 @@ package bgen
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
-
-	"github.com/carbocation/pfx"
 )
 
 // Via https://play.golang.org/p/rn0bAjeEGtK
@@ -55,11 +52,8 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 	// Collect bytes
 	// Reverse their order
 
-	shift := 8 - nbits
-	mask := 1<<uint(nbits) - 1
-
 	loops := nbits / 8
-	resid := nbits % 8
+	remainder := nbits % 8
 	// invMask := 8 - nbits
 	// invMask := 8 % nbits
 
@@ -87,9 +81,9 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 		}
 		results[loop] = result
 	}
-	if resid > 0 {
+	if remainder > 0 {
 		var result byte
-		for i := resid - 1; i >= 0; i-- {
+		for i := remainder - 1; i >= 0; i-- {
 			bit, err := r.ReadBit()
 			if err != nil {
 				return 0, err
@@ -98,14 +92,6 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 				result |= 1 << uint(i)
 			}
 		}
-		// Mask out the max possible for this bit size and rescale up towards
-		// 2^8: //result = result << uint(invMask)
-
-		// result <<= (uint(invMask) - 1)
-		// result = result<<uint(invMask) - 1
-		// result = (uint(result) & uint(mask)) << uint(shift)
-
-		result = byte((uint(result) & uint(mask)) << uint(shift))
 
 		results[loops] = result
 	}
@@ -119,8 +105,8 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 	} else {
 		final = uint64(results[0])
 	}
-	if nbits%8 != 0 {
-		return 0, pfx.Err(fmt.Errorf("Currently can only handle probabilities that are multiples of 8 bits (8, 16, 24, 32)"))
-	}
+	// if nbits%8 != 0 {
+	// 	return 0, pfx.Err(fmt.Errorf("Currently can only handle probabilities that are multiples of 8 bits (8, 16, 24, 32)"))
+	// }
 	return
 }

@@ -27,10 +27,7 @@ func (b *BGEN) NewVariantReader() *VariantReader {
 		b:             b,
 	}
 
-	// if b.FlagLayout != Layout1 {
-	// 	// Layout1 contains an extra 4 bytes at the start of each variant
 	vr.currentOffset += 4
-	// }
 
 	return vr
 }
@@ -302,7 +299,7 @@ func probabilitiesFromDecompressedLayout1(v *Variant, input []byte) error {
 	prob := &Probability{}
 	prob.MaximumPloidy = 2
 	prob.MinimumPloidy = 2
-	prob.NIndividuals = uint32(len(input) / 6)
+	prob.NSamples = uint32(len(input) / 6)
 	prob.NAlleles = 2
 	prob.NProbabilityBits = 16
 	prob.Phased = false
@@ -385,10 +382,10 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	var size int
 
 	size = 4
-	prob.NIndividuals = binary.LittleEndian.Uint32(input[cursor : cursor+size])
+	prob.NSamples = binary.LittleEndian.Uint32(input[cursor : cursor+size])
 	cursor += size
 
-	prob.SampleProbabilities = make([]*SampleProbability, prob.NIndividuals, prob.NIndividuals)
+	prob.SampleProbabilities = make([]*SampleProbability, prob.NSamples, prob.NSamples)
 
 	size = 2
 	prob.NAlleles = binary.LittleEndian.Uint16(input[cursor : cursor+size])

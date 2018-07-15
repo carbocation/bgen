@@ -1,7 +1,7 @@
 package bgen
 
 type Probability struct {
-	NIndividuals        uint32 // nsamples
+	NSamples            uint32
 	NAlleles            uint16
 	MinimumPloidy       uint8
 	MaximumPloidy       uint8

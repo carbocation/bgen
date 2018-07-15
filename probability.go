@@ -1,12 +1,5 @@
 package bgen
 
-// TODO:
-
-type ProbabilityLayout1 struct {
-}
-
-// TODO:
-
 type ProbabilityLayout2 struct {
 	NIndividuals        uint32 // nsamples
 	NAlleles            uint16
@@ -15,7 +8,6 @@ type ProbabilityLayout2 struct {
 	Phased              bool
 	NProbabilityBits    uint8 // nbits. Must be 1-32 inclusive (there is no uint4 which would otherwise suffice)
 	SampleProbabilities []*SampleProbability
-	// Probabilities    [][]float64
 }
 
 // SampleProbability represents the variant data for one specfific individual at
@@ -27,9 +19,3 @@ type SampleProbability struct {
 	Ploidy        uint8 // Limited to 0-63
 	Probabilities []float64
 }
-
-// Ploidy: Z
-// NAlleles: K
-// Probability order: // TODO:
-// Probabilities are:
-//

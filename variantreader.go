@@ -160,7 +160,7 @@ VariantLoop:
 				}
 				offset += uncompressedDataBlockSize
 				// Handle the uncompressed genotype data
-				if err = vr.populateProbabilitiesLayout1(v, vr.buffer[:uncompressedDataBlockSize]); err != nil {
+				if err = vr.populateProbabilitiesLayout1(v, vr.buffer[:uncompressedDataBlockSize], int(uncompressedDataBlockSize)); err != nil {
 					break
 				}
 
@@ -176,7 +176,7 @@ VariantLoop:
 				}
 				offset += int64(genoBlockLength)
 				// Handle the ZLIB compressed genotype data
-				if err = vr.populateProbabilitiesLayout1(v, vr.buffer[:genoBlockLength]); err != nil {
+				if err = vr.populateProbabilitiesLayout1(v, vr.buffer[:genoBlockLength], int(genoBlockLength)); err != nil {
 					break
 				}
 			} else {
@@ -259,14 +259,31 @@ func (vr *VariantReader) readNBytesAtOffset(N int, offset int64) error {
 }
 
 // TODO:
-func (vr *VariantReader) populateProbabilitiesLayout1(v *Variant, input []byte) error {
+func (vr *VariantReader) populateProbabilitiesLayout1(v *Variant, input []byte, expectedSize int) error {
 	switch vr.b.FlagCompression {
 	case CompressionDisabled:
+		if len(input) != expectedSize {
+			return pfx.Err(fmt.Errorf("Expected to read %d bytes, got %d", expectedSize, len(input)))
+		}
 
+		if err := probabilitiesFromDecompressedLayout1(v, input); err != nil {
+			return pfx.Err(err)
+		}
 	case CompressionZLIB:
+		if len(input) != expectedSize {
+			return pfx.Err(fmt.Errorf("Expected to decompress %d bytes, got %d", expectedSize, len(input)))
+		}
+
+		if err := probabilitiesFromDecompressedLayout1(v, input); err != nil {
+			return pfx.Err(err)
+		}
 	}
 
 	return fmt.Errorf("Compression choice %s is not compatible with Layout %s", vr.b.FlagCompression, vr.b.FlagLayout)
+}
+
+func probabilitiesFromDecompressedLayout1(v *Variant, input []byte) error {
+	return pfx.Err(fmt.Errorf("Not yet implemented"))
 }
 
 // expectedSize acts as a checksum, ensuring that the decompressed size matches

@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/carbocation/pfx"
 )
@@ -241,9 +240,6 @@ VariantLoop:
 			}
 		}
 
-		// TODO: actually interpret the genotype data based on which layout
-		// version is being used.
-
 		break
 	}
 
@@ -406,9 +402,6 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 
 			if prob.Phased {
 				// The i'th sample's data contains this many *bits*:
-				// if _, err = rdr.ReadUint(int(prob.NProbabilityBits) * int(sp.Ploidy) * (int(prob.NAlleles) - 1)); err != nil {
-				// 	return pfx.Err(err)
-				// }
 				for i := 0; i < int(prob.NProbabilityBits)*int(sp.Ploidy)*(int(prob.NAlleles)-1); i++ {
 					if _, err := rdr.ReadBit(); err != nil {
 						return pfx.Err(err)
@@ -416,9 +409,6 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 				}
 			} else {
 				// Unphased
-				// if _, err = rdr.ReadUint(int(prob.NProbabilityBits) * (nCombs - 1)); err != nil {
-				// 	return pfx.Err(err)
-				// }
 				for i := 0; i < nCombs-1; i++ {
 					for j := 0; j < int(prob.NProbabilityBits); j++ {
 						if _, err := rdr.ReadBit(); err != nil {
@@ -440,30 +430,22 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 			// The sample's data contains this many bytes:
 			which = 0
 			for i := 0; i < int(sp.Ploidy); i++ {
-				probBits = 0
 				for j := 0; j < int(prob.NAlleles)-1; j++ {
-					for j := 0; j < int(prob.NProbabilityBits); j++ {
-						bit, err := rdr.ReadBit()
-						if err != nil {
-							return pfx.Err(err)
-						}
-						if bit {
-							probBits |= uint64(1) << uint64(j) // uint((int(prob.NProbabilityBits)-1)-j)
-						}
+					probBits = 0
+
+					// Currently works for 8 bits (and multiples thereof) only
+					probBits, err = rdr.ReadUintLittleEndian(int(prob.NProbabilityBits))
+					if err != nil {
+						return pfx.Err(err)
 					}
 
-					// probBits, err = rdr.ReadUint(int(prob.NProbabilityBits))
-					// if err != nil {
-					// 	return pfx.Err(err)
-					// }
-					// sp.Probabilities = append(sp.Probabilities, float64(probBits)/denom)
 					pSum += probBits
+
 					sp.Probabilities[which] = float64(probBits) / denom
 					which++
 				}
-				// sp.Probabilities[maxCombs-1] = (denom - float64(pSum)) / denom
 			}
-			return fmt.Errorf("Phased reads are not yet implemented")
+			sp.Probabilities[maxCombs-1] = (denom - float64(pSum)) / denom
 		} else {
 			// Unphased
 			which = 0
@@ -492,41 +474,8 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	// Try to read just one more bit from the reader, expecting that it will
 	// simply be the EOF. If not, we didn't properly read all the bits.
 	if _, err = rdr.ReadBit(); err != io.EOF {
-		// return pfx.Err(fmt.Errorf("Additional bits were left unread for variant %v", *v))
-		log.Printf("Unread variants in %v", *v)
+		return pfx.Err(fmt.Errorf("Additional bits were left unread for variant %v", *v))
 	}
-
-	// log.Printf("%+v\n%+v\n", *v, v.ProbabilitiesLayout2)
-	// for i, v := range v.ProbabilitiesLayout2.SampleProbabilities {
-	// 	if v != nil {
-	// 		log.Printf("%+v\n", v)
-	// 	}
-	// 	if i > 5 {
-	// 		break
-	// 	}
-	// }
-
-	// return fmt.Errorf("Not yet implemented")
 
 	return nil
 }
-
-// type bitReader struct {
-// 	bitCursor int
-// 	bytes     []byte
-// }
-
-// func newBitReader(b []byte) *bitReader {
-// 	return &bitReader{
-// 		bytes: b,
-// 	}
-// }
-
-// func (b *bitReader) ReadIntFromNBits(n int) int {
-// 	if n < 1 {
-// 		return 0
-// 	}
-
-// 	b.bitCursor += n
-
-// }

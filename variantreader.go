@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/carbocation/pfx"
 )
@@ -26,10 +27,10 @@ func (b *BGEN) NewVariantReader() *VariantReader {
 		b:             b,
 	}
 
-	if b.FlagLayout != Layout1 {
-		// Layout1 contains an extra 4 bytes at the start of each variant
-		vr.currentOffset += 4
-	}
+	// if b.FlagLayout != Layout1 {
+	// 	// Layout1 contains an extra 4 bytes at the start of each variant
+	vr.currentOffset += 4
+	// }
 
 	return vr
 }
@@ -258,7 +259,6 @@ func (vr *VariantReader) readNBytesAtOffset(N int, offset int64) error {
 	return err
 }
 
-// TODO:
 func (vr *VariantReader) populateProbabilitiesLayout1(v *Variant, input []byte, expectedSize int) error {
 	switch vr.b.FlagCompression {
 	case CompressionDisabled:
@@ -271,19 +271,66 @@ func (vr *VariantReader) populateProbabilitiesLayout1(v *Variant, input []byte, 
 		}
 	case CompressionZLIB:
 		if len(input) != expectedSize {
-			return pfx.Err(fmt.Errorf("Expected to decompress %d bytes, got %d", expectedSize, len(input)))
+			return pfx.Err(fmt.Errorf("Expected to start with %d compressed bytes, got %d", expectedSize, len(input)))
 		}
 
-		if err := probabilitiesFromDecompressedLayout1(v, input); err != nil {
+		bb := &bytes.Buffer{}
+
+		reader, err := zlib.NewReader(bytes.NewBuffer(input))
+		if err != nil {
 			return pfx.Err(err)
 		}
+		if _, err = io.Copy(bb, reader); err != nil {
+			return pfx.Err(err)
+		}
+
+		if err := probabilitiesFromDecompressedLayout1(v, bb.Bytes()); err != nil {
+			return pfx.Err(err)
+		}
+	default:
+		return fmt.Errorf("Compression choice %s is not compatible with Layout %s", vr.b.FlagCompression, vr.b.FlagLayout)
 	}
 
-	return fmt.Errorf("Compression choice %s is not compatible with Layout %s", vr.b.FlagCompression, vr.b.FlagLayout)
+	return nil
 }
 
 func probabilitiesFromDecompressedLayout1(v *Variant, input []byte) error {
-	return pfx.Err(fmt.Errorf("Not yet implemented"))
+	if len(input)%6 != 0 {
+		return fmt.Errorf("Input contains %d bytes, which cannot be evenly divided into %d", len(input), 6)
+	}
+
+	prob := &ProbabilityLayout2{}
+	prob.MaximumPloidy = 2
+	prob.MinimumPloidy = 2
+	prob.NIndividuals = uint32(len(input) / 6)
+	prob.NAlleles = 2
+	prob.NProbabilityBits = 16
+	prob.Phased = false
+	prob.SampleProbabilities = make([]*SampleProbability, len(input)/6, len(input)/6)
+
+	offset := 0
+	for i := range prob.SampleProbabilities {
+		sp := &SampleProbability{
+			Missing:       false,
+			Ploidy:        2,
+			Probabilities: make([]float64, 3, 3),
+		}
+		for j := range sp.Probabilities {
+			sp.Probabilities[j] = float64(binary.LittleEndian.Uint16(input[offset:offset+2])) / 32768.0 // (32768 == 1<<15)
+			offset += 2
+		}
+
+		prob.SampleProbabilities[i] = sp
+	}
+
+	v.ProbabilitiesLayout2 = prob
+
+	if offset != len(input) {
+		log.Println(input[len(input)-1])
+		return pfx.Err(fmt.Errorf("Read %d bytes, expected to read %d bytes", offset, len(input)))
+	}
+
+	return nil
 }
 
 // expectedSize acts as a checksum, ensuring that the decompressed size matches

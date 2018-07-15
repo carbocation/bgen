@@ -299,7 +299,7 @@ func probabilitiesFromDecompressedLayout1(v *Variant, input []byte) error {
 		return fmt.Errorf("Input contains %d bytes, which cannot be evenly divided into %d", len(input), 6)
 	}
 
-	prob := &ProbabilityLayout2{}
+	prob := &Probability{}
 	prob.MaximumPloidy = 2
 	prob.MinimumPloidy = 2
 	prob.NIndividuals = uint32(len(input) / 6)
@@ -323,7 +323,7 @@ func probabilitiesFromDecompressedLayout1(v *Variant, input []byte) error {
 		prob.SampleProbabilities[i] = sp
 	}
 
-	v.ProbabilitiesLayout2 = prob
+	v.Probabilities = prob
 
 	if offset != len(input) {
 		log.Println(input[len(input)-1])
@@ -380,7 +380,7 @@ func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, 
 }
 
 func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) {
-	prob := ProbabilityLayout2{}
+	prob := Probability{}
 	cursor := 0
 	var size int
 
@@ -533,7 +533,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 		}
 	}
 
-	v.ProbabilitiesLayout2 = &prob
+	v.Probabilities = &prob
 
 	// Try to read just one more bit from the reader, expecting that it will
 	// simply be the EOF. If not, we didn't properly read all the bits.

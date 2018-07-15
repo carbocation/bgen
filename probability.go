@@ -1,6 +1,6 @@
 package bgen
 
-type ProbabilityLayout2 struct {
+type Probability struct {
 	NIndividuals        uint32 // nsamples
 	NAlleles            uint16
 	MinimumPloidy       uint8

@@ -16,3 +16,5 @@ Because ZStandard requires cgo, support for BGEN specification 1.3 is pushed int
 
 ## API
 The API is under active development. The main thrust is to convert most functions that return slices into functions that return readers.
+
+For the current API, please see the [BGEN Godoc](https://godoc.org/github.com/carbocation/bgen)

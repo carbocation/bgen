@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/carbocation/pfx"
 )
@@ -36,8 +35,29 @@ func (vr *VariantReader) Error() error {
 	return vr.err
 }
 
+// Read extracts the next variant and its genotype probabilities from the
+// bitstream. If there are no variants left to read, Read returns nil. If there
+// is a true error, Read populates the error value on the VariantReader, which
+// can be read by calling the Error() method on the VariantReader.
 func (vr *VariantReader) Read() *Variant {
 	v, newOffset, err := vr.parseVariantAtOffset(int64(vr.currentOffset))
+	if err != nil {
+		if err == io.EOF {
+			return nil
+		}
+		vr.err = pfx.Err(err)
+	}
+
+	vr.VariantsSeen++
+	vr.currentOffset = uint32(newOffset)
+
+	return v
+}
+
+// ReadAt extracts the variant and its genotype probabilities from the bitstream
+// at the specified offset. Otherwise, it behaves like Read().
+func (vr *VariantReader) ReadAt(byteOffset int64) *Variant {
+	v, newOffset, err := vr.parseVariantAtOffset(byteOffset)
 	if err != nil {
 		if err == io.EOF {
 			return nil
@@ -322,7 +342,7 @@ func probabilitiesFromDecompressedLayout1(v *Variant, input []byte) error {
 	v.Probabilities = prob
 
 	if offset != len(input) {
-		log.Println(input[len(input)-1])
+		// log.Println(input[len(input)-1])
 		return pfx.Err(fmt.Errorf("Read %d bytes, expected to read %d bytes", offset, len(input)))
 	}
 

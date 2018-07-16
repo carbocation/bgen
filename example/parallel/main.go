@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -70,7 +71,8 @@ func main() {
 	}()
 
 	// Prep the Workers:
-	for i := 0; i < 10; i++ {
+	log.Println("Launching", runtime.NumCPU(), "workers")
+	for i := 0; i < runtime.NumCPU(); i++ {
 		go Worker(i, *path, offset, output)
 	}
 
@@ -90,12 +92,17 @@ func main() {
 	defer rows.Close()
 
 	var row bgen.VariantIndex
+	i := 0
 	for rows.Next() {
+		if i%1000 == 0 {
+			log.Println("Processed", i, "variants")
+		}
 		if err := rows.StructScan(&row); err != nil {
 			log.Fatalln(err)
 		}
 
 		offset <- int64(row.FileStartPosition)
+		i++
 	}
 	close(offset)
 	time.Sleep(1 * time.Second)

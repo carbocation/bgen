@@ -5,6 +5,7 @@ type Variant struct {
 	RSID          string
 	Chromosome    string
 	Position      uint32
+	NSamples      uint32 // Populated only in Layout1
 	NAlleles      uint16
 	Alleles       []Allele
 	Probabilities *Probability

@@ -62,14 +62,13 @@ VariantLoop:
 	for {
 		if vr.b.FlagLayout == Layout1 {
 			// Layout1 has 4 extra bytes at the start of each variant that
-			// denotes the number of individuals the row represents.
-
-			// log.Println("We are on layout 1")
+			// denotes the number of individuals the row represents. In Layout2,
+			// this is denoted within the genotype probability block.
 			if err = vr.readNBytesAtOffset(4, offset); err != nil {
 				break
 			}
 			offset += 4
-			// log.Println("Individuals represented:", binary.LittleEndian.Uint32(vr.buffer[:4]))
+			v.NSamples = binary.LittleEndian.Uint32(vr.buffer[:4])
 		}
 
 		// ID:

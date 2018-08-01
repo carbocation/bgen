@@ -48,9 +48,19 @@ func TestBitReadUint(t *testing.T) {
 	if target != uint64(val) {
 		t.Errorf("Got %d, expected %d", val, target)
 	}
+
+	br = newBitReader(bytes.NewBuffer(data))
+	val, err = br.ReadUintLittleEndian(8)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if target != uint64(val) {
+		t.Errorf("Got %d, expected %d", val, target)
+	}
 }
 
-func TestBitReaderLittleEndianSubByte(t *testing.T) {
+func TestBitReaderLittleEndian7Bit(t *testing.T) {
 	value := []byte{93}
 
 	br := newBitReader(bytes.NewBuffer(value))
@@ -67,5 +77,21 @@ func TestBitReaderLittleEndianSubByte(t *testing.T) {
 
 	if valBig != valLittle {
 		t.Errorf("First 7 bits of %d yielded %d from bigendian, different from %d from littleendian", value[0], valBig, valLittle)
+	}
+}
+
+func TestBitReaderLittleEndian16Bit(t *testing.T) {
+	value := []byte{93, 115}
+
+	br := newBitReader(bytes.NewBuffer(value))
+	valLittle, err := br.ReadUintLittleEndian(16)
+	if err != nil {
+		t.Error(err)
+	}
+
+	properLittleEndian := binary.LittleEndian.Uint16(value)
+
+	if valLittle != uint64(properLittleEndian) {
+		t.Errorf("First 12 bits of %016b\n yielded %016b from bigendian,\n different from %016b from littleendian", value, properLittleEndian, valLittle)
 	}
 }

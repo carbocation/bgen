@@ -1,7 +1,6 @@
 package bgen
 
 import (
-	"encoding/binary"
 	"io"
 )
 
@@ -34,8 +33,10 @@ func (r *bitReader) ReadBit() (bool, error) {
 
 func (r *bitReader) ReadUint(nbits int) (uint64, error) {
 	var result uint64
+	var bit bool
+	var err error
 	for i := nbits - 1; i >= 0; i-- {
-		bit, err := r.ReadBit()
+		bit, err = r.ReadBit()
 		if err != nil {
 			return 0, err
 		}
@@ -54,59 +55,30 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 
 	loops := nbits / 8
 	remainder := nbits % 8
-	// invMask := 8 - nbits
-	// invMask := 8 % nbits
 
-	var results []byte
-	if nbits > 32 {
-		results = make([]byte, 8, 8)
-	} else if nbits > 16 {
-		results = make([]byte, 4, 4)
-	} else if nbits > 8 {
-		results = make([]byte, 2, 2)
-	} else {
-		results = make([]byte, 1, 1)
-	}
-
+	var bit bool
 	for loop := 0; loop < loops; loop++ {
-		var result byte
 		for i := 8 - 1; i >= 0; i-- {
-			bit, err := r.ReadBit()
+			bit, err = r.ReadBit()
 			if err != nil {
 				return 0, err
 			}
 			if bit {
-				result |= 1 << uint(i)
+				final |= 1 << uint(i+(8*loop))
 			}
 		}
-		results[loop] = result
 	}
 	if remainder > 0 {
-		var result byte
 		for i := remainder - 1; i >= 0; i-- {
 			bit, err := r.ReadBit()
 			if err != nil {
 				return 0, err
 			}
 			if bit {
-				result |= 1 << uint(i)
+				final |= 1 << uint(i+(8*loops))
 			}
 		}
-
-		results[loops] = result
 	}
 
-	if nbits > 32 {
-		final = binary.LittleEndian.Uint64(results)
-	} else if nbits > 16 {
-		final = uint64(binary.LittleEndian.Uint32(results))
-	} else if nbits > 8 {
-		final = uint64(binary.LittleEndian.Uint16(results))
-	} else {
-		final = uint64(results[0])
-	}
-	// if nbits%8 != 0 {
-	// 	return 0, pfx.Err(fmt.Errorf("Currently can only handle probabilities that are multiples of 8 bits (8, 16, 24, 32)"))
-	// }
 	return
 }

@@ -10,14 +10,10 @@ type bitReader struct {
 	reader io.ByteReader
 	byte   byte
 	offset byte
-
-	errCache    error
-	lastBit     bool
-	resultCache uint64
 }
 
 func newBitReader(r io.ByteReader) *bitReader {
-	return &bitReader{r, 0, 0, nil, false, 0}
+	return &bitReader{r, 0, 0}
 }
 
 func (r *bitReader) ReadBit() (bool, error) {
@@ -25,30 +21,33 @@ func (r *bitReader) ReadBit() (bool, error) {
 		r.offset = 0
 	}
 	if r.offset == 0 {
-		if r.byte, r.errCache = r.reader.ReadByte(); r.errCache != nil {
-			return false, r.errCache
+		var err error
+		if r.byte, err = r.reader.ReadByte(); err != nil {
+			return false, err
 		}
 	}
-	r.lastBit = (r.byte & (0x80 >> r.offset)) != 0
+	bit := (r.byte & (0x80 >> r.offset)) != 0
 	r.offset++
-	return r.lastBit, nil
+	return bit, nil
 }
 
 func (r *bitReader) ReadUint(nbits int) (uint64, error) {
-	r.resultCache = 0
+	var result uint64
+	var bit bool
+	var err error
 	for i := nbits - 1; i >= 0; i-- {
-		r.lastBit, r.errCache = r.ReadBit()
-		if r.errCache != nil {
-			return 0, r.errCache
+		bit, err = r.ReadBit()
+		if err != nil {
+			return 0, err
 		}
-		if r.lastBit {
-			r.resultCache |= 1 << uint(i)
+		if bit {
+			result |= 1 << uint(i)
 		}
 	}
-	return r.resultCache, nil
+	return result, nil
 }
 
-func (r *bitReader) ReadUintLittleEndian(nbits int) (uint64, error) {
+func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
 	// Bit order is good
 	// Byte order is bad
 	// Collect bytes
@@ -57,30 +56,29 @@ func (r *bitReader) ReadUintLittleEndian(nbits int) (uint64, error) {
 	loops := nbits / 8
 	remainder := nbits % 8
 
-	r.resultCache = 0
-
+	var bit bool
 	for loop := 0; loop < loops; loop++ {
 		for i := 8 - 1; i >= 0; i-- {
-			r.lastBit, r.errCache = r.ReadBit()
-			if r.errCache != nil {
-				return 0, r.errCache
+			bit, err = r.ReadBit()
+			if err != nil {
+				return 0, err
 			}
-			if r.lastBit {
-				r.resultCache |= 1 << uint(i+(8*loop))
+			if bit {
+				final |= 1 << uint(i+(8*loop))
 			}
 		}
 	}
 	if remainder > 0 {
 		for i := remainder - 1; i >= 0; i-- {
-			r.lastBit, r.errCache = r.ReadBit()
-			if r.errCache != nil {
-				return 0, r.errCache
+			bit, err := r.ReadBit()
+			if err != nil {
+				return 0, err
 			}
-			if r.lastBit {
-				r.resultCache |= 1 << uint(i+(8*loops))
+			if bit {
+				final |= 1 << uint(i+(8*loops))
 			}
 		}
 	}
 
-	return r.resultCache, nil
+	return
 }

@@ -1,84 +1,37 @@
 package bgen
 
-import (
-	"io"
-)
-
-// Via https://play.golang.org/p/rn0bAjeEGtK
-
+// This variant is inspired by the C version from
+// https://git.biohpc.swmed.edu/zhanxw/rvtests For a more direct translation,
+// see this Golang playground example: https://play.golang.org/p/l4uNS0G5KzU
 type bitReader struct {
-	reader io.ByteReader
-	byte   byte
-	offset byte
+	offset int
+	bytes  []byte
+	nybble int
 }
 
-func newBitReader(r io.ByteReader) *bitReader {
-	return &bitReader{r, 0, 0}
+func newBitReader(bytes []byte, nybbleSize int) *bitReader {
+	br := &bitReader{
+		bytes:  bytes,
+		nybble: nybbleSize,
+	}
+
+	return br
 }
 
-func (r *bitReader) ReadBit() (bool, error) {
-	if r.offset == 8 {
-		r.offset = 0
+func (br *bitReader) Next(result *uint32) {
+	*result = 0
+	for i := 0; i < br.nybble; i++ {
+		*result |= br.getBit(i) << uint32(i)
 	}
-	if r.offset == 0 {
-		var err error
-		if r.byte, err = r.reader.ReadByte(); err != nil {
-			return false, err
-		}
-	}
-	bit := (r.byte & (0x80 >> r.offset)) != 0
-	r.offset++
-	return bit, nil
+	br.offset += br.nybble
 }
 
-func (r *bitReader) ReadUint(nbits int) (uint64, error) {
-	var result uint64
-	var bit bool
-	var err error
-	for i := nbits - 1; i >= 0; i-- {
-		bit, err = r.ReadBit()
-		if err != nil {
-			return 0, err
-		}
-		if bit {
-			result |= 1 << uint(i)
-		}
-	}
-	return result, nil
-}
-
-func (r *bitReader) ReadUintLittleEndian(nbits int) (final uint64, err error) {
-	// Bit order is good
-	// Byte order is bad
-	// Collect bytes
-	// Reverse their order
-
-	loops := nbits / 8
-	remainder := nbits % 8
-
-	var bit bool
-	for loop := 0; loop < loops; loop++ {
-		for i := 8 - 1; i >= 0; i-- {
-			bit, err = r.ReadBit()
-			if err != nil {
-				return 0, err
-			}
-			if bit {
-				final |= 1 << uint(i+(8*loop))
-			}
-		}
-	}
-	if remainder > 0 {
-		for i := remainder - 1; i >= 0; i-- {
-			bit, err := r.ReadBit()
-			if err != nil {
-				return 0, err
-			}
-			if bit {
-				final |= 1 << uint(i+(8*loops))
-			}
-		}
+func (br *bitReader) getBit(idx int) uint32 {
+	whichByte := (br.offset + idx) / 8
+	remaining := (br.offset + idx) % 8
+	if br.bytes[whichByte]&(1<<uint(remaining)) != 0 {
+		return 1
 	}
 
-	return
+	return 0
 }

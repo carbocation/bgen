@@ -457,13 +457,15 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	cursor += size
 
 	// From here out, we read *bits* instead of bytes
-	buf := bytes.NewBuffer(input[cursor:])
-	rdr := newBitReader(buf)
+	// buf := bytes.NewBuffer(input[cursor:])
+	// rdr := newBitReader(buf)
+
+	rdr := newBitReader(input[cursor:], int(prob.NProbabilityBits))
 
 	// For the actual probabilities,
 	denom := float64(uint64(1)<<uint64(prob.NProbabilityBits) - 1)
 
-	var probBits, pSum uint64
+	var probBits, pSum uint32
 	var nCombs, which int
 	maxCombs := Choose(int(prob.NAlleles)+int(prob.MaximumPloidy)-1, int(prob.NAlleles)-1)
 	for _, sp := range prob.SampleProbabilities {
@@ -482,19 +484,13 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 
 			if prob.Phased {
 				// The i'th sample's data contains this many *bits*:
-				for i := 0; i < int(prob.NProbabilityBits)*int(sp.Ploidy)*(int(prob.NAlleles)-1); i++ {
-					if _, err := rdr.ReadBit(); err != nil {
-						return pfx.Err(err)
-					}
+				for i := 0; i < int(sp.Ploidy)*(int(prob.NAlleles)-1); i++ {
+					rdr.Next(&probBits)
 				}
 			} else {
 				// Unphased
 				for i := 0; i < nCombs-1; i++ {
-					for j := 0; j < int(prob.NProbabilityBits); j++ {
-						if _, err := rdr.ReadBit(); err != nil {
-							return pfx.Err(err)
-						}
-					}
+					rdr.Next(&probBits)
 				}
 			}
 
@@ -511,13 +507,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 			which = 0
 			for i := 0; i < int(sp.Ploidy); i++ {
 				for j := 0; j < int(prob.NAlleles)-1; j++ {
-					probBits = 0
-
-					// Currently works for 8 bits (and multiples thereof) only
-					probBits, err = rdr.ReadUintLittleEndian(int(prob.NProbabilityBits))
-					if err != nil {
-						return pfx.Err(err)
-					}
+					rdr.Next(&probBits)
 
 					pSum += probBits
 
@@ -530,13 +520,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 			// Unphased
 			which = 0
 			for i := 0; i < nCombs-1; i++ {
-				probBits = 0
-
-				// Currently works for 8 bits (and multiples thereof) only
-				probBits, err = rdr.ReadUintLittleEndian(int(prob.NProbabilityBits))
-				if err != nil {
-					return pfx.Err(err)
-				}
+				rdr.Next(&probBits)
 
 				pSum += probBits
 
@@ -550,12 +534,6 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	}
 
 	v.Probabilities = &prob
-
-	// Try to read just one more bit from the reader, expecting that it will
-	// simply be the EOF. If not, we didn't properly read all the bits.
-	if _, err = rdr.ReadBit(); err != io.EOF {
-		return pfx.Err(fmt.Errorf("Additional bits were left unread for variant %v", *v))
-	}
 
 	return nil
 }

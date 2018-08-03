@@ -34,6 +34,20 @@ func TestBitReaderLittleEndian7Bit(t *testing.T) {
 	}
 }
 
+func TestBitReader8Bit(t *testing.T) {
+	value := []byte{93, 0, 0xff}
+
+	br := newBitReader(value, 8)
+
+	for i := 0; i < len(value); i++ {
+		valBig := br.Next()
+
+		if valBig != uint32(value[i]) {
+			t.Errorf("%d) Next 8 bits of %d yielded %d, expected %d", i, value, valBig, value[i])
+		}
+	}
+}
+
 func TestBitReaderLittleEndian16Bit(t *testing.T) {
 	value := []byte{93, 115}
 

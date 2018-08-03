@@ -19,6 +19,11 @@ func newBitReader(bytes []byte, nybbleSize int) *bitReader {
 }
 
 func (br *bitReader) Next() uint32 {
+	if br.nybble == 8 {
+		// Speed up the most common path
+		br.offset += 8
+		return uint32(br.bytes[(br.offset-8)/8])
+	}
 	var result uint32
 	for i := 0; i < br.nybble; i++ {
 		result |= br.getBit(i) << uint32(i)
@@ -29,9 +34,9 @@ func (br *bitReader) Next() uint32 {
 }
 
 func (br *bitReader) getBit(idx int) uint32 {
-	whichByte := (br.offset + idx) / 8
-	remaining := (br.offset + idx) % 8
-	if br.bytes[whichByte]&(1<<uint(remaining)) != 0 {
+	// whichByte := (br.offset + idx) / 8
+	// remaining := (br.offset + idx) % 8
+	if br.bytes[(br.offset+idx)/8]&(1<<uint((br.offset+idx)%8)) != 0 {
 		return 1
 	}
 

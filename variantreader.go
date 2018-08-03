@@ -421,15 +421,13 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	// value; 2^6 [or 1<<6-1].)
 	size = 1 // byte per sample
 	for i := range v.SampleProbabilities {
-		sp := &SampleProbability{}
+		v.SampleProbabilities[i] = &SampleProbability{}
 
 		// Most significant bit:
-		sp.Missing = (input[cursor]&(1<<7) == 1)
+		v.SampleProbabilities[i].Missing = (input[cursor]&(1<<7) == 1)
 
 		// 6 least significant bits:
-		sp.Ploidy = input[cursor] & (1<<6 - 1)
-
-		v.SampleProbabilities[i] = sp
+		v.SampleProbabilities[i].Ploidy = input[cursor] & (1<<6 - 1)
 
 		cursor += size
 	}

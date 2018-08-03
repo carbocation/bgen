@@ -315,17 +315,16 @@ func probabilitiesFromDecompressedLayout1(v *Variant, input []byte) error {
 		return fmt.Errorf("Input contains %d bytes, which cannot be evenly divided into %d", len(input), 6)
 	}
 
-	prob := &Probability{}
-	prob.MaximumPloidy = 2
-	prob.MinimumPloidy = 2
-	prob.NSamples = uint32(len(input) / 6)
-	prob.NAlleles = 2
-	prob.NProbabilityBits = 16
-	prob.Phased = false
-	prob.SampleProbabilities = make([]*SampleProbability, len(input)/6, len(input)/6)
+	v.MaximumPloidy = 2
+	v.MinimumPloidy = 2
+	v.NSamples = uint32(len(input) / 6)
+	v.NAlleles = 2
+	v.NProbabilityBits = 16
+	v.Phased = false
+	v.SampleProbabilities = make([]*SampleProbability, len(input)/6, len(input)/6)
 
 	offset := 0
-	for i := range prob.SampleProbabilities {
+	for i := range v.SampleProbabilities {
 		sp := &SampleProbability{
 			Missing:       false,
 			Ploidy:        2,
@@ -336,10 +335,8 @@ func probabilitiesFromDecompressedLayout1(v *Variant, input []byte) error {
 			offset += 2
 		}
 
-		prob.SampleProbabilities[i] = sp
+		v.SampleProbabilities[i] = sp
 	}
-
-	v.Probabilities = prob
 
 	if offset != len(input) {
 		// log.Println(input[len(input)-1])
@@ -396,30 +393,25 @@ func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, 
 }
 
 func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) {
-	prob := Probability{}
 	cursor := 0
 	var size int
 
 	size = 4
-	prob.NSamples = binary.LittleEndian.Uint32(input[cursor : cursor+size])
+	v.NSamples = binary.LittleEndian.Uint32(input[cursor : cursor+size])
 	cursor += size
 
-	prob.SampleProbabilities = make([]*SampleProbability, prob.NSamples, prob.NSamples)
+	v.SampleProbabilities = make([]*SampleProbability, v.NSamples, v.NSamples)
 
 	size = 2
-	prob.NAlleles = binary.LittleEndian.Uint16(input[cursor : cursor+size])
-	cursor += size
-
-	if prob.NAlleles != v.NAlleles {
-		return pfx.Err(fmt.Errorf("NAlleles from the probability data (%d) differs from that of the variant (%d)", prob.NAlleles, v.NAlleles))
-	}
-
-	size = 1
-	prob.MinimumPloidy = input[cursor]
+	v.NAlleles = binary.LittleEndian.Uint16(input[cursor : cursor+size])
 	cursor += size
 
 	size = 1
-	prob.MaximumPloidy = input[cursor]
+	v.MinimumPloidy = input[cursor]
+	cursor += size
+
+	size = 1
+	v.MaximumPloidy = input[cursor]
 	cursor += size
 
 	// For each individual (NIndividuals), there is a byte of data. The most
@@ -428,7 +420,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	// represent ploidy, clamped to (0-63). (NB: 64 is the capacity of a 6-bit
 	// value; 2^6 [or 1<<6-1].)
 	size = 1 // byte per sample
-	for i := range prob.SampleProbabilities {
+	for i := range v.SampleProbabilities {
 		sp := &SampleProbability{}
 
 		// Most significant bit:
@@ -437,20 +429,20 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 		// 6 least significant bits:
 		sp.Ploidy = input[cursor] & (1<<6 - 1)
 
-		prob.SampleProbabilities[i] = sp
+		v.SampleProbabilities[i] = sp
 
 		cursor += size
 	}
 
 	size = 1
-	prob.Phased = input[cursor] == 1
+	v.Phased = input[cursor] == 1
 	if input[cursor] > 1 {
 		return pfx.Err(fmt.Errorf("Byte representing phased status was %d (neither 0 nor 1) for variant %v", input[cursor], *v))
 	}
 	cursor += size
 
 	size = 1
-	prob.NProbabilityBits = input[cursor]
+	v.NProbabilityBits = input[cursor]
 	if input[cursor] > 32 || input[cursor] < 1 {
 		return pfx.Err(fmt.Errorf("Byte representing number of bits used to store probabilty was %d (must be 1-32 inclusive) for variant %v", input[cursor], *v))
 	}
@@ -460,19 +452,19 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	// buf := bytes.NewBuffer(input[cursor:])
 	// rdr := newBitReader(buf)
 
-	rdr := newBitReader(input[cursor:], int(prob.NProbabilityBits))
+	rdr := newBitReader(input[cursor:], int(v.NProbabilityBits))
 
 	// For the actual probabilities,
-	denom := float64(uint64(1)<<uint64(prob.NProbabilityBits) - 1)
+	denom := float64(uint64(1)<<uint64(v.NProbabilityBits) - 1)
 
 	var probBits, pSum uint32
 	var nCombs, which int
-	maxCombs := Choose(int(prob.NAlleles)+int(prob.MaximumPloidy)-1, int(prob.NAlleles)-1)
-	for _, sp := range prob.SampleProbabilities {
+	maxCombs := Choose(int(v.NAlleles)+int(v.MaximumPloidy)-1, int(v.NAlleles)-1)
+	for _, sp := range v.SampleProbabilities {
 		probBits, pSum, nCombs, which = 0, 0, 0, 0
 
-		if !prob.Phased {
-			nCombs = Choose(int(prob.NAlleles)+int(sp.Ploidy)-1, int(prob.NAlleles)-1)
+		if !v.Phased {
+			nCombs = Choose(int(v.NAlleles)+int(sp.Ploidy)-1, int(v.NAlleles)-1)
 		}
 
 		if sp.Missing {
@@ -482,9 +474,9 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 			// represents a change from the earlier draft of this spec; see the
 			// rationale below)." So, need to jump forward by this many bytes.
 
-			if prob.Phased {
+			if v.Phased {
 				// The i'th sample's data contains this many *bits*:
-				for i := 0; i < int(sp.Ploidy)*(int(prob.NAlleles)-1); i++ {
+				for i := 0; i < int(sp.Ploidy)*(int(v.NAlleles)-1); i++ {
 					probBits = rdr.Next()
 				}
 			} else {
@@ -502,11 +494,11 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 
 		// Now iterating it bits, not bytes
 
-		if prob.Phased {
+		if v.Phased {
 			// The sample's data contains this many bytes:
 			which = 0
 			for i := 0; i < int(sp.Ploidy); i++ {
-				for j := 0; j < int(prob.NAlleles)-1; j++ {
+				for j := 0; j < int(v.NAlleles)-1; j++ {
 					probBits = rdr.Next()
 
 					pSum += probBits
@@ -532,8 +524,6 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 			sp.Probabilities[maxCombs-1] = (denom - float64(pSum)) / denom
 		}
 	}
-
-	v.Probabilities = &prob
 
 	return nil
 }

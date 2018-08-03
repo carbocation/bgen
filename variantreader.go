@@ -466,7 +466,10 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	var probBits, pSum uint32
 	var nCombs, which int
 	maxCombs := Choose(int(prob.NAlleles)+int(prob.MaximumPloidy)-1, int(prob.NAlleles)-1)
-	for _, sp := range prob.SampleProbabilities {
+
+	var unsafeBackingSlice = make([]float64, maxCombs*len(prob.SampleProbabilities), maxCombs*len(prob.SampleProbabilities))
+
+	for spi, sp := range prob.SampleProbabilities {
 		probBits, pSum, nCombs, which = 0, 0, 0, 0
 
 		if !prob.Phased {
@@ -496,7 +499,10 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 		}
 
 		// Not missing, default everything to 0
-		sp.Probabilities = make([]float64, maxCombs, maxCombs)
+		// Unsafely, we share a backing slice to reduce allocations.
+		// Later write operations should not be performed on these slices.
+		// TODO: should be nCombs instead of maxCombs?
+		sp.Probabilities = unsafeBackingSlice[spi*maxCombs : (spi+1)*maxCombs]
 
 		// Now iterating it bits, not bytes
 

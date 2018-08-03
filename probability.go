@@ -7,7 +7,7 @@ type Probability struct {
 	MaximumPloidy       uint8
 	Phased              bool
 	NProbabilityBits    uint8 // nbits. Must be 1-32 inclusive (there is no uint4 which would otherwise suffice)
-	SampleProbabilities []*SampleProbability
+	SampleProbabilities []SampleProbability
 }
 
 // SampleProbability represents the variant data for one specfific individual at

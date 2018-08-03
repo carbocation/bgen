@@ -322,21 +322,18 @@ func probabilitiesFromDecompressedLayout1(v *Variant, input []byte) error {
 	prob.NAlleles = 2
 	prob.NProbabilityBits = 16
 	prob.Phased = false
-	prob.SampleProbabilities = make([]*SampleProbability, len(input)/6, len(input)/6)
+	prob.SampleProbabilities = make([]SampleProbability, len(input)/6, len(input)/6)
 
 	offset := 0
 	for i := range prob.SampleProbabilities {
-		sp := &SampleProbability{
-			Missing:       false,
-			Ploidy:        2,
-			Probabilities: make([]float64, 3, 3),
-		}
-		for j := range sp.Probabilities {
-			sp.Probabilities[j] = float64(binary.LittleEndian.Uint16(input[offset:offset+2])) / 32768.0 // (32768 == 1<<15)
+		prob.SampleProbabilities[i].Missing = false
+		prob.SampleProbabilities[i].Ploidy = 2
+		prob.SampleProbabilities[i].Probabilities = make([]float64, 3, 3)
+
+		for j := range prob.SampleProbabilities[i].Probabilities {
+			prob.SampleProbabilities[i].Probabilities[j] = float64(binary.LittleEndian.Uint16(input[offset:offset+2])) / 32768.0 // (32768 == 1<<15)
 			offset += 2
 		}
-
-		prob.SampleProbabilities[i] = sp
 	}
 
 	v.Probabilities = prob
@@ -404,7 +401,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	prob.NSamples = binary.LittleEndian.Uint32(input[cursor : cursor+size])
 	cursor += size
 
-	prob.SampleProbabilities = make([]*SampleProbability, prob.NSamples, prob.NSamples)
+	prob.SampleProbabilities = make([]SampleProbability, prob.NSamples, prob.NSamples)
 
 	size = 2
 	prob.NAlleles = binary.LittleEndian.Uint16(input[cursor : cursor+size])
@@ -429,8 +426,6 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	// value; 2^6 [or 1<<6-1].)
 	size = 1 // byte per sample
 	for i := range prob.SampleProbabilities {
-		prob.SampleProbabilities[i] = &SampleProbability{}
-
 		// Most significant bit:
 		prob.SampleProbabilities[i].Missing = (input[cursor]&(1<<7) == 1)
 

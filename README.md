@@ -10,9 +10,9 @@ go get github.com/carbocation/bgen
 ```
 
 ## Requirements
-For BGEN specifications 1.1 and 1.2, this package is immediately usable after `go get`. 
+For BGEN specifications 1.1, 1.2 and 1.3 with unphased samples, this package is immediately usable after `go get`. 
 
-Because ZStandard requires cgo, support for BGEN specification 1.3 is pushed into a separate branch (bgen13). For those using specification 1.2, this greatly simplifies the cross-compile process.
+Because the package relies on ZStandard, cgo is needed. Therefore, cross-compilation is not straightforward.
 
 ## API
 The API is under active development and the public API may change for now.

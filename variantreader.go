@@ -464,14 +464,14 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 
 	var unsafeBackingSlice = make([]float64, maxCombs*len(prob.SampleProbabilities), maxCombs*len(prob.SampleProbabilities))
 
-	for spi, sp := range prob.SampleProbabilities {
+	for spi := range prob.SampleProbabilities {
 		probBits, pSum, nCombs, which = 0, 0, 0, 0
 
 		if !prob.Phased {
-			nCombs = Choose(int(prob.NAlleles)+int(sp.Ploidy)-1, int(prob.NAlleles)-1)
+			nCombs = Choose(int(prob.NAlleles)+int(prob.SampleProbabilities[spi].Ploidy)-1, int(prob.NAlleles)-1)
 		}
 
-		if sp.Missing {
+		if prob.SampleProbabilities[spi].Missing {
 			// Missing values are represented as zeroes but are *not* skipped.
 			// "Probabilities for samples with missing data (as defined by the
 			// missingness/ploidy byte) are written as zeroes (note this
@@ -480,7 +480,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 
 			if prob.Phased {
 				// The i'th sample's data contains this many *bits*:
-				for i := 0; i < int(sp.Ploidy)*(int(prob.NAlleles)-1); i++ {
+				for i := 0; i < int(prob.SampleProbabilities[spi].Ploidy)*(int(prob.NAlleles)-1); i++ {
 					probBits = rdr.Next()
 				}
 			} else {
@@ -493,28 +493,28 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 			continue
 		}
 
-		// Not missing, default everything to 0
-		// Unsafely, we share a backing slice to reduce allocations.
-		// Later write operations should not be performed on these slices.
+		// We share a backing slice to reduce allocations and use three-index
+		// slicing to prevent end-user append() operations from modifying
+		// unrelated probabilities.
 		// TODO: should be nCombs instead of maxCombs?
-		sp.Probabilities = unsafeBackingSlice[spi*maxCombs : (spi+1)*maxCombs]
+		prob.SampleProbabilities[spi].Probabilities = unsafeBackingSlice[spi*maxCombs : (spi+1)*maxCombs : (spi+1)*maxCombs]
 
 		// Now iterating it bits, not bytes
 
 		if prob.Phased {
 			// The sample's data contains this many bytes:
 			which = 0
-			for i := 0; i < int(sp.Ploidy); i++ {
+			for i := 0; i < int(prob.SampleProbabilities[spi].Ploidy); i++ {
 				for j := 0; j < int(prob.NAlleles)-1; j++ {
 					probBits = rdr.Next()
 
 					pSum += probBits
 
-					sp.Probabilities[which] = float64(probBits) / denom
+					prob.SampleProbabilities[spi].Probabilities[which] = float64(probBits) / denom
 					which++
 				}
 			}
-			sp.Probabilities[maxCombs-1] = (denom - float64(pSum)) / denom
+			prob.SampleProbabilities[spi].Probabilities[maxCombs-1] = (denom - float64(pSum)) / denom
 		} else {
 			// Unphased
 			which = 0
@@ -523,12 +523,12 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 
 				pSum += probBits
 
-				sp.Probabilities[which] = float64(probBits) / denom
+				prob.SampleProbabilities[spi].Probabilities[which] = float64(probBits) / denom
 				which++
 			}
 			// Final combination is implied
 			//sp.Probabilities = append(sp.Probabilities, (denom-float64(pSum))/denom)
-			sp.Probabilities[maxCombs-1] = (denom - float64(pSum)) / denom
+			prob.SampleProbabilities[spi].Probabilities[maxCombs-1] = (denom - float64(pSum)) / denom
 		}
 	}
 

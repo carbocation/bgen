@@ -18,12 +18,14 @@ func newBitReader(bytes []byte, nybbleSize int) *bitReader {
 	return br
 }
 
-func (br *bitReader) Next(result *uint32) {
-	*result = 0
+func (br *bitReader) Next() uint32 {
+	var result uint32
 	for i := 0; i < br.nybble; i++ {
-		*result |= br.getBit(i) << uint32(i)
+		result |= br.getBit(i) << uint32(i)
 	}
 	br.offset += br.nybble
+
+	return result
 }
 
 func (br *bitReader) getBit(idx int) uint32 {

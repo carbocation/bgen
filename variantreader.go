@@ -485,12 +485,12 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 			if prob.Phased {
 				// The i'th sample's data contains this many *bits*:
 				for i := 0; i < int(sp.Ploidy)*(int(prob.NAlleles)-1); i++ {
-					rdr.Next(&probBits)
+					probBits = rdr.Next()
 				}
 			} else {
 				// Unphased
 				for i := 0; i < nCombs-1; i++ {
-					rdr.Next(&probBits)
+					probBits = rdr.Next()
 				}
 			}
 
@@ -507,7 +507,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 			which = 0
 			for i := 0; i < int(sp.Ploidy); i++ {
 				for j := 0; j < int(prob.NAlleles)-1; j++ {
-					rdr.Next(&probBits)
+					probBits = rdr.Next()
 
 					pSum += probBits
 
@@ -520,7 +520,7 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 			// Unphased
 			which = 0
 			for i := 0; i < nCombs-1; i++ {
-				rdr.Next(&probBits)
+				probBits = rdr.Next()
 
 				pSum += probBits
 

@@ -27,8 +27,7 @@ func TestBitReaderLittleEndian7Bit(t *testing.T) {
 	value := []byte{93}
 
 	br := newBitReader(value, 7)
-	var valBig uint32
-	br.Next(&valBig)
+	valBig := br.Next()
 
 	if valBig != 93 {
 		t.Errorf("First 7 bits of %d yielded %d, expected %d", value[0], valBig, 93)
@@ -39,8 +38,7 @@ func TestBitReaderLittleEndian16Bit(t *testing.T) {
 	value := []byte{93, 115}
 
 	br := newBitReader(value, 16)
-	var valLittle uint32
-	br.Next(&valLittle)
+	valLittle := br.Next()
 
 	properLittleEndian := binary.LittleEndian.Uint16(value)
 

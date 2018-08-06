@@ -103,7 +103,7 @@ func main() {
 			break
 		}
 
-		for j, pb := range v.Probabilities.SampleProbabilities {
+		for j, pb := range v.SampleProbabilities {
 			if j > 10 {
 				continue
 			}
@@ -123,8 +123,7 @@ func main() {
 			continue
 		}
 
-		log.Printf("Variant %d) %+v ProbBits: %d\n", i, v, v.Probabilities.NProbabilityBits)
-		log.Printf("ProbabilityLayout2: %+v\n", v.Probabilities)
+		log.Printf("Variant %d) %+v ProbBits: %d\n", i, v, v.NProbabilityBits)
 	}
 
 	if vr.Error() != nil {

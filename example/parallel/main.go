@@ -156,7 +156,7 @@ func Worker(workerID int, path string, offset <-chan int64, output chan<- Allele
 			}
 
 			// Only unphased for now
-			if variant.Probabilities.Phased {
+			if variant.Phased {
 				continue
 			}
 
@@ -174,7 +174,7 @@ func Worker(workerID int, path string, offset <-chan int64, output chan<- Allele
 				m[id] = 0.0
 			}
 
-			for _, prob := range variant.Probabilities.SampleProbabilities {
+			for _, prob := range variant.SampleProbabilities {
 				// log.Println(prob)
 				for i, p := range prob.Probabilities {
 					if i == 0 {

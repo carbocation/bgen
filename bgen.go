@@ -1,10 +1,14 @@
 package bgen
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"os"
+	"strings"
 
+	"cloud.google.com/go/storage"
+	"github.com/carbocation/genomisc"
 	"github.com/carbocation/pfx"
 )
 
@@ -25,10 +29,10 @@ const (
 
 // BGEN is the main object used for parsing BGEN files
 type BGEN struct {
-	FilePath         string   // TODO: Make private, expose fully resolved path by method?
-	File             *os.File // TODO: Make private, expose by method (if at all)?
-	NVariants        uint32   // TODO: Make private, expose by method?
-	NSamples         uint32   // TODO: Make private, expose by method?
+	FilePath         string                  // TODO: Make private, expose fully resolved path by method?
+	File             genomisc.ReaderAtCloser // TODO: Make private, expose by method (if at all)?
+	NVariants        uint32                  // TODO: Make private, expose by method?
+	NSamples         uint32                  // TODO: Make private, expose by method?
 	FlagCompression  Compression
 	FlagLayout       Layout
 	FlagHasSampleIDs bool
@@ -40,11 +44,18 @@ func (b *BGEN) Close() error {
 	return pfx.Err(b.File.Close())
 }
 
-// Open attempts to read a bgen file located at path. If successful,
-// this returns a new BGEN object. Otherwise, it returns an error.
+// Open attempts to read a bgen file located at path. If successful, this
+// returns a new BGEN object. Otherwise, it returns an error. Note that *os.File
+// trivially satisfies genomisc.ReaderAtCloser, so an *os.File can be provided.
+// If the path starts with gs://, then we assume that this is a Google Storage
+// object and will attempt to read it with your default credentials.
 func Open(path string) (*BGEN, error) {
 	b := &BGEN{
 		FilePath: path,
+	}
+
+	if strings.HasPrefix(path, "gs://") {
+		return OpenFromGoogleStorageWithContext(b, context.Background())
 	}
 
 	file, err := os.Open(path)
@@ -52,6 +63,41 @@ func Open(path string) (*BGEN, error) {
 		return nil, pfx.Err(err)
 	}
 	b.File = file
+
+	err = populateBGENHeader(b)
+	if err != nil {
+		return nil, pfx.Err(err)
+	}
+
+	return b, nil
+}
+
+func OpenFromGoogleStorageWithContext(b *BGEN, ctx context.Context) (*BGEN, error) {
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Detect the bucket and the path to the actual file
+	pathParts := strings.SplitN(strings.TrimPrefix(b.FilePath, "gs://"), "/", 2)
+	if len(pathParts) != 2 {
+		return nil, fmt.Errorf("Tried to split your google storage path into 2 parts, but got %d: %v", len(pathParts), pathParts)
+	}
+	bucketName := pathParts[0]
+	pathName := pathParts[1]
+
+	// Open the bucket with default credentials
+	bkt := client.Bucket(bucketName)
+	handle := bkt.Object(pathName)
+
+	wrappedHandle := genomisc.GSReaderAtCloser{
+		ObjectHandle: handle,
+		Context:      ctx,
+		// Because Close() is called after every read, the final Close() is a
+		// nop for this type, and can be left nil
+	}
+
+	b.File = wrappedHandle
 
 	err = populateBGENHeader(b)
 	if err != nil {

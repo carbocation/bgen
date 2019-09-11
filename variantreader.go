@@ -122,8 +122,10 @@ VariantLoop:
 		offset += 2
 		stringSize = int(binary.LittleEndian.Uint16(vr.buffer[:2]))
 		if stringSize != 2 {
-			err = fmt.Errorf("Variant %d: Chromosome field size is %d bytes; expected 2", vr.VariantsSeen, stringSize)
-			break
+			// This is OK; nothing to do. Reminder to self: We read 2 bytes to
+			// discover how many characters are in the chromosome field. This
+			// does *not* mean that the chromosome field must be 2 characters
+			// long. The chr can be 1 character, 20 characters, whatever.
 		}
 		if err = vr.readNBytesAtOffset(stringSize, offset); err != nil {
 			break

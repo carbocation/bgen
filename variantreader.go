@@ -361,10 +361,10 @@ func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, 
 
 		reader, err := zlib.NewReader(bytes.NewBuffer(input))
 		if err != nil {
-			return pfx.Err(err)
+			return pfx.Err(fmt.Errorf("Tried reading %d compressed bytes: %s", len(input), err))
 		}
-		if _, err = io.Copy(bb, reader); err != nil {
-			return pfx.Err(err)
+		if nBytes, err := io.Copy(bb, reader); err != nil {
+			return pfx.Err(fmt.Errorf("Tried copying %d decompressed bytes (expected %d compressed / %d decompressed): %s", nBytes, len(input), expectedSize, err))
 		}
 		if len(bb.Bytes()) != expectedSize {
 			return pfx.Err(fmt.Errorf("Expected to decompress %d bytes, got %d", expectedSize, len(bb.Bytes())))

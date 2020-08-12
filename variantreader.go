@@ -294,7 +294,7 @@ func (vr *VariantReader) populateProbabilitiesLayout1(v *Variant, input []byte, 
 
 		bb := &bytes.Buffer{}
 
-		reader, err := zlib.NewReader(bytes.NewBuffer(input))
+		reader, err := zlib.NewReader(bytes.NewReader(input))
 		if err != nil {
 			return pfx.Err(err)
 		}
@@ -359,7 +359,7 @@ func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, 
 	case CompressionZLIB:
 		bb := &bytes.Buffer{}
 
-		reader, err := zlib.NewReader(bytes.NewBuffer(input))
+		reader, err := zlib.NewReader(bytes.NewReader(input))
 		if err != nil {
 			return pfx.Err(fmt.Errorf("Tried reading %d compressed bytes: %s", len(input), err))
 		}

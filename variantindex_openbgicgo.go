@@ -13,6 +13,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+const whichSQLiteDriver = "sqlite3"
+
 func OpenBGI(path string) (*BGIIndex, error) {
 	bgi := &BGIIndex{
 		Metadata: &BGIMetadata{},

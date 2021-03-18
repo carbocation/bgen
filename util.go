@@ -30,3 +30,7 @@ func Choose(n, k int) int {
 
 	return ans
 }
+
+func WhichSQLiteDriver() string {
+	return whichSQLiteDriver
+}

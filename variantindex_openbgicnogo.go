@@ -13,6 +13,8 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const whichSQLiteDriver = "sqlite"
+
 func OpenBGI(path string) (*BGIIndex, error) {
 	bgi := &BGIIndex{
 		Metadata: &BGIMetadata{},

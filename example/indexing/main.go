@@ -10,7 +10,6 @@ import (
 
 	"github.com/carbocation/bgen"
 	"github.com/carbocation/pfx"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {

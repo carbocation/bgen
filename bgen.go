@@ -90,7 +90,7 @@ func OpenFromGoogleStorageWithContext(b *BGEN, ctx context.Context) (*BGEN, erro
 	bkt := client.Bucket(bucketName)
 	handle := bkt.Object(pathName)
 
-	wrappedHandle := genomisc.GSReaderAtCloser{
+	wrappedHandle := &genomisc.GSReaderAtCloser{
 		ObjectHandle: handle,
 		Context:      ctx,
 		// Because Close() is called after every read, the final Close() is a

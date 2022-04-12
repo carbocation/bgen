@@ -1,4 +1,4 @@
-// +build !cgo
+//go:build !cgo
 
 package bgen
 
@@ -6,6 +6,7 @@ package bgen
 // driver. It is slower than the sqlite3 cgo driver.
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -32,6 +33,17 @@ func OpenBGI(path string) (*BGIIndex, error) {
 		return nil, err
 	}
 	bgi.DB = db
+
+	// See https://www.rockyourcode.com/til-sqlite-foreign-key-support-with-go/
+	// and https://twitter.com/frioux/status/1483235674228596739
+	_, err = db.DB.Exec(`
+	PRAGMA journal_mode = OFF;
+	PRAGMA synchronous = OFF;
+	PRAGMA auto_vacuum = NONE;
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("unable to set pragmas: %w", err)
+	}
 
 	// Not all index files have metadata; ignore any error
 	_ = bgi.DB.Get(bgi.Metadata, "SELECT * FROM Metadata LIMIT 1")

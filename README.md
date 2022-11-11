@@ -1,6 +1,6 @@
 # bgen
 
-**BGEN** is a [BGEN file format](http://www.well.ox.ac.uk/~gav/bgen_format/) reader for golang.
+**BGEN** is a BGEN parser for golang. It can read files in the [.bgen format](http://www.well.ox.ac.uk/~gav/bgen_format/), but it cannot write them.
 
 This package supports the most common use-cases for BGEN specifications 1.1, 1.2, and 1.3. It does not yet support phased data.
 

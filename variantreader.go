@@ -298,6 +298,7 @@ func (vr *VariantReader) populateProbabilitiesLayout1(v *Variant, input []byte, 
 		if err != nil {
 			return pfx.Err(err)
 		}
+		defer reader.Close()
 		if _, err = io.Copy(bb, reader); err != nil {
 			return pfx.Err(err)
 		}
@@ -363,6 +364,7 @@ func (vr *VariantReader) populateProbabilitiesLayout2(v *Variant, input []byte, 
 		if err != nil {
 			return pfx.Err(fmt.Errorf("Tried reading %d compressed bytes: %s", len(input), err))
 		}
+		defer reader.Close()
 		if nBytes, err := io.Copy(bb, reader); err != nil {
 			return pfx.Err(fmt.Errorf("Tried copying %d decompressed bytes (expected %d compressed / %d decompressed): %s", nBytes, len(input), expectedSize, err))
 		}

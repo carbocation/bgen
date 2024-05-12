@@ -416,17 +416,18 @@ func probabilitiesFromDecompressedLayout2(v *Variant, input []byte) (err error) 
 	cursor += size
 
 	// For each individual (NIndividuals), there is a byte of data. The most
-	// significant bit represents missing (if 1) or nonmissing. The secondmost
-	// significant bit seems to be unused. The 6 least significant bits
-	// represent ploidy, clamped to (0-63). (NB: 64 is the capacity of a 6-bit
-	// value; 2^6 [or 1<<6-1].)
+	// significant bit represents missing (if the most significant bit is set,
+	// and since it's the most significant bit being set to 1 means a decimal
+	// value of 128) or nonmissing. The secondmost significant bit seems to be
+	// unused. The 6 least significant bits represent ploidy, clamped to (0-63).
+	// (NB: 64 is the capacity of a 6-bit value; 2^6 [or 1<<6-1].)
 	size = 1 // byte per sample
 	for i := range v.SampleProbabilities {
 		// Most significant bit:
-		v.SampleProbabilities[i].Missing = (input[cursor]&(1<<7) == 1)
+		v.SampleProbabilities[i].Missing = (input[cursor] & (1 << 7)) != 0
 
 		// 6 least significant bits:
-		v.SampleProbabilities[i].Ploidy = input[cursor] & (1<<6 - 1)
+		v.SampleProbabilities[i].Ploidy = input[cursor] & ((1 << 6) - 1)
 
 		cursor += size
 	}
